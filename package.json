@@ -1,0 +1,52 @@
+{
+  "name": "el-pro-components",
+  "version": "0.1.0",
+  "description": "Element Plus 体系的 Pro 高阶模板组件：ProTable / ProForm / ProDescriptions / ProLayout，由列 schema 驱动，内置 valueType 渲染器与请求生命周期",
+  "type": "module",
+  "main": "./dist/el-pro.umd.cjs",
+  "module": "./dist/el-pro.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/el-pro.js",
+      "require": "./dist/el-pro.umd.cjs"
+    },
+    "./style.css": "./dist/el-pro.css"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "keywords": [
+    "vue3",
+    "element-plus",
+    "pro-table",
+    "pro-form",
+    "schema",
+    "crud"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --mode lib",
+    "build:demo": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "peerDependencies": {
+    "element-plus": "^2.7.0",
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@vitejs/plugin-vue": "^5.1.0",
+    "element-plus": "^2.8.0",
+    "typescript": "~5.4.5",
+    "vite": "^5.4.0",
+    "vite-plugin-dts": "^4.0.0",
+    "vue": "^3.4.0",
+    "vue-tsc": "^2.1.10"
+  }
+}
