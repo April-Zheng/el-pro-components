@@ -14,6 +14,7 @@ import GroupedPage from './pages/GroupedPage.vue'
 import FormPage from './pages/FormPage.vue'
 import FormContainerPage from './pages/FormContainerPage.vue'
 import FormListPage from './pages/FormListPage.vue'
+import QueryFilterPage from './pages/QueryFilterPage.vue'
 import DetailPage from './pages/DetailPage.vue'
 import CardPage from './pages/CardPage.vue'
 import StatisticPage from './pages/StatisticPage.vue'
@@ -41,6 +42,7 @@ const active = ref(initialPage())
     <FormPage v-else-if="active === '/form'" />
     <FormContainerPage v-else-if="active === '/form-container'" />
     <FormListPage v-else-if="active === '/form-list'" />
+    <QueryFilterPage v-else-if="active === '/query-filter'" />
     <DetailPage v-else-if="active === '/detail'" />
     <CardPage v-else-if="active === '/card'" />
     <StatisticPage v-else-if="active === '/statistic'" />

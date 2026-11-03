@@ -382,6 +382,50 @@ export interface ProDrawerFormProps extends ProFormContainerProps {
 }
 
 /**
+ * 查询筛选区（ElProQueryFilter）。
+ *
+ * 和表格内置搜索栏的差别只有一个：**谁来管状态**。内置搜索栏是表格的一部分，
+ * 自己收着那一份表单值；这个是独立组件，`model` 在页面手里，
+ * 所以同一份筛选条件可以同时喂给多个表格。
+ */
+export interface ProQueryFilterProps {
+  columns: ProColumn[]
+  /** 受控数据。传了就一直用这一份，组件不会克隆它 */
+  model?: Record<string, any>
+  /** 初始值：没传 `model` 时用它建内部草稿；传了 `model` 时它也是「重置」要回到的基准 */
+  initialValues?: Record<string, any>
+
+  /** 每项占几格（24 栅格），可写响应式 @default { xs: 24, sm: 12, md: 8, lg: 6 } */
+  span?: ResponsiveValue<number>
+  /** 折叠时最多显示几项。不传就按「一行几列，留一列给按钮」推算 */
+  defaultFormItemsNumber?: number
+  /**
+   * 源码里的同名字段。**实际语义也是「项数」**（不是一行几列），
+   * 为了跟 ProComponents 对齐才留着，新代码建议直接用 `defaultFormItemsNumber`。
+   */
+  defaultColsNumber?: number
+  /** 默认是否折叠 @default true */
+  defaultCollapsed?: boolean
+  /** 受控折叠状态，配 `v-model:collapsed` */
+  collapsed?: boolean
+  /** 是否允许折叠（项数不够时本来也不显示展开按钮） @default true */
+  collapsible?: boolean
+
+  searchText?: string
+  resetText?: string
+  loading?: boolean
+
+  /* ----- 透传给内部 el-form ----- */
+  labelWidth?: string | number
+  labelPosition?: 'left' | 'right' | 'top'
+  gutter?: number
+  /** 上下排列（`labelPosition: 'top'`）时在行之间画分割线 @default false */
+  split?: boolean
+  /** 折叠时在展开按钮上显示藏了几项 @default true */
+  showHiddenNum?: boolean
+}
+
+/**
  * 表单字段联动。
  *
  * 回调拿到的是**只含 `dependsOn` 里那几个字段**的对象，不是整份 model ——

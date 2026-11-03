@@ -127,3 +127,19 @@ export function sortPropsByFixed(props: string[], state: ColumnFixedState): stri
   // Array.prototype.sort 自 ES2019 起是稳定排序，组内相对顺序不用额外处理
   return props.slice().sort((a, b) => fixedRank(state, a) - fixedRank(state, b))
 }
+
+/* ------------------------------ 搜索列 ------------------------------ */
+
+/**
+ * 搜索栏里这一列该用哪个 valueType。
+ *
+ * 常见需求是「表格里显示到秒、搜索时选日期区间」，`search.valueType` 就是给这种
+ * 两副面孔用的。放在 core 里是因为表格的搜索栏和 ElProQueryFilter 都要用，
+ * 各写一份迟早会分叉。
+ */
+export function resolveSearchColumn<T>(column: ProColumn<T>): ProColumn<T> {
+  if (typeof column.search === 'object' && column.search.valueType) {
+    return { ...column, valueType: column.search.valueType }
+  }
+  return column
+}

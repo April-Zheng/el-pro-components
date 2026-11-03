@@ -4,6 +4,7 @@ import ElProDescriptions from './components/ElProDescriptions/ElProDescriptions.
 import ElProForm from './components/ElProForm/ElProForm.vue'
 import ElProModalForm from './components/ElProForm/ElProModalForm.vue'
 import ElProDrawerForm from './components/ElProForm/ElProDrawerForm.vue'
+import ElProQueryFilter from './components/ElProQueryFilter/ElProQueryFilter.vue'
 import ElProTable from './components/ElProTable/ElProTable.vue'
 import ElProEditableTable from './components/ElProTable/ElProEditableTable.vue'
 import ElProCard from './components/ElProCard/ElProCard.vue'
@@ -25,6 +26,7 @@ export {
   ElProDrawerForm,
   ElProTable,
   ElProEditableTable,
+  ElProQueryFilter,
   ElProCard,
   ElProCheckCard,
   ElProCheckCardGroup,
@@ -53,6 +55,8 @@ export type { NormalizedGutter } from './core/responsive'
 
 export { pickDeps, resolveColumnByDependency, resolveFormColumns } from './core/formDependency'
 
+export { calcActionsOffset, computeQueryFilterLayout, resolveShowLength } from './core/queryFilter'
+
 export {
   DISPLAY_ONLY_VALUE_TYPES,
   ENUM_VALUE_TYPES,
@@ -75,6 +79,7 @@ export * from './types'
 const components = [
   ElProTable,
   ElProEditableTable,
+  ElProQueryFilter,
   ElProForm,
   ElProModalForm,
   ElProDrawerForm,

@@ -8,6 +8,7 @@
  */
 import { computed, ref } from 'vue'
 import { ElButton, ElCol, ElForm, ElFormItem, ElRow } from 'element-plus'
+import { resolveSearchColumn } from '../../core/column'
 import FormField from '../../fields/FormField.vue'
 import type { ProColumn } from '../../types'
 
@@ -68,10 +69,7 @@ const hiddenCount = computed(() =>
 
 /** 搜索时可能要用另一种 valueType（如表格显示 dateTime、搜索用 dateRange） */
 function searchColumn(col: ProColumn): ProColumn {
-  if (typeof col.search === 'object' && col.search.valueType) {
-    return { ...col, valueType: col.search.valueType }
-  }
-  return col
+  return resolveSearchColumn(col)
 }
 </script>
 

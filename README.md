@@ -102,6 +102,7 @@ type ProRequest<T> = (
 | --- | --- |
 | `ElProTable` | 列配置驱动的 CRUD 表格（搜索栏 / 列设置 / 分页 / 排序 / 竞态） |
 | `ElProEditableTable` | 上面那个把「行内编辑」预置好的薄壳 |
+| `ElProQueryFilter` | 独立成块的查询筛选区（默认折叠，条件是页面自己的） |
 | `ElProForm` | 同一份 columns 生成表单 |
 | `ElProModalForm` / `ElProDrawerForm` | 同一套表单放进弹窗 / 抽屉，提交成功才关窗 |
 | `ElProDescriptions` | 同一份 columns 生成详情页 |
@@ -221,6 +222,38 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 - 保存前只改草稿，`data` 里的原对象不动 —— 这样「取消」才有意义。
 - **新增行拿主键**：`onSave` 可以返回保存后的记录（接口回包），返回的对象会合并进该行。返回了主键，这一行才会摆脱内部临时 key（`__new_n`），之后编辑、删除才能拿真实 id 调接口。
 - 新增行没有 id 时用内部临时 key 区分编辑态；临时 key 存在行对象的 `Symbol` 属性上，不会出现在 `JSON.stringify` 或发出去的请求体里。
+
+### ElProQueryFilter
+
+```vue
+<ElProQueryFilter :columns="columns" :model="model" @search="onSearch" @reset="onReset" />
+```
+
+和 `ElProTable` 内置那个搜索栏长得像，差别只在**谁管状态**：内置搜索栏是表格的一部分，值收在表格内部；
+这个是独立组件，`model` 在页面手里。所以同一份筛选条件能同时喂给请求、导出、右上角的条件回显。
+
+![查询筛选区](docs/screenshots/query-filter.png)
+
+折叠是默认行为，露几项不是写死的，而是**按一行能放几项减一**算出来的（留一格给按钮）。
+一行几项又跟着断点和 `span` 走，所以窄屏会自动少露几项——这也是为什么 `span` 一改，折叠数量跟着变。
+
+| 属性 | 说明 |
+| --- | --- |
+| `columns` | 同表格的列定义。`hideInSearch` 的列不进来；`search.valueType` 可以换成另一种控件（比如表格显示 `dateTime`、这里选区间） |
+| `model` | 受控数据。不传则组件内部建草稿 |
+| `initialValues` | 初始值。**同时是「重置」要回到的基准**；不传就取挂载时 `model` 的快照 |
+| `span` | 每项占几格，支持响应式 `{ xs: 24, lg: 6 }`，默认 `{ xs: 24, sm: 12, md: 8, lg: 6 }` |
+| `defaultFormItemsNumber` | 折叠时露几项，覆盖按 span 推算的值 |
+| `defaultCollapsed` / `collapsed` | 默认折叠；`collapsed` 是受控开关，配 `v-model:collapsed` |
+| `searchText` / `resetText` / `loading` | 按钮文案与查询按钮的 loading |
+| `labelWidth` / `labelPosition` / `gutter` / `split` | 透传给内部 `el-form`。`split` 只在 `labelPosition: 'top'` 时画行间分割线 |
+
+事件：`@search(values)`、`@reset(values)`、`@collapse-change`。实例方法：`search()`、`reset()`、`getValues()`、`validate()`、`collapse()`、`expand()`。
+
+两个实现细节值得知道：
+
+- **交出去的是快照**（`{ ...model }` 的浅拷贝）。查询之后再改表单，外面收到的那份不会跟着变——否则你把它塞进 `request` 的依赖里，会自己触发一轮没人点的请求。
+- **操作列用 `offset` 贴右边**，不是 flex 推过去。推过去的写法在换行时会飘到下一行左边，`offset` 是按栅格算出来的位置。
 
 ### ElProForm
 
@@ -636,11 +669,11 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] **`ElProModalForm` / `ElProDrawerForm`**（校验 → 提交 → 成功才关窗）
 - [x] **列表型字段 `formList`**（增删 / 复制 / 嵌套校验）
 - [x] **字段联动 `dependency`**（显隐 + 按值改列配置）
+- [x] **`ElProQueryFilter`**（独立筛选区，默认折叠 + 响应式栅格）
 - [ ] 表单分组 `group`
 - [ ] 列设置的分组拖拽（现在有分组就关掉拖拽）
 - [ ] 表格请求层补齐 `postData` / `onLoad` / `polling` / `debounceTime`
-- [ ] 表单布局变体：`StepsForm` / `QueryFilter` / `LightFilter`
-- [ ] `QueryFilter`（表格页顶部独立的筛选区）
+- [ ] 表单布局变体：`StepsForm` / `LightFilter`
 - [ ] 导出当前列定义对应的 CSV
 - [ ] 行拖拽排序（`sortablejs` 可选依赖）
 
@@ -653,7 +686,7 @@ npm run build       # 打包库产物到 dist/
 npm run typecheck   # 类型检查
 ```
 
-playground 支持 `?page=/users`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
+playground 支持 `?page=/users`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/query-filter`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
 
 demo 本身也按「壳 / 页 / 数据」拆开了，加一个示例只动 `pages/` 一个文件：
 
@@ -673,6 +706,7 @@ demo/
     ├── FormPage.vue
     ├── FormContainerPage.vue  # 弹窗 / 抽屉表单
     ├── FormListPage.vue       # 字段组（可增删）
+    ├── QueryFilterPage.vue    # 查询筛选区
     ├── DetailPage.vue
     ├── CardPage.vue
     ├── ListPage.vue
@@ -690,6 +724,7 @@ src/
 │   ├── column.ts       # 列的「可设置 / 可排序」判定、顺序应用、分组展开与过滤
 │   ├── responsive.ts   # 断点订阅 + 响应式取值（colSpan / gutter / grid）
 │   ├── formDependency.ts # 表单联动：按依赖字段算显隐与列配置覆盖
+│   ├── queryFilter.ts  # 查询区布局：折叠露出几项、操作列 offset
 │   ├── tableCellContext.ts # 单元格渲染的 provide/inject 契约（多级表头递归要用）
 │   └── cardContext.ts  # 卡片父子关系的 provide/inject 契约
 ├── fields/
@@ -697,6 +732,7 @@ src/
 │   └── FormField.vue     # 输入侧外壳（写）
 ├── components/
 │   ├── ElProTable/       # ElProTable + TableColumnNode（递归列）+ SearchForm + TableToolbar + ColumnSetting
+│   ├── ElProQueryFilter/ # 独立筛选区
 │   ├── ElProForm/        # ElProForm + ElProModalForm / ElProDrawerForm（共用 useFormContainer）
 │   ├── ElProDescriptions/
 │   ├── ElProLayout/
