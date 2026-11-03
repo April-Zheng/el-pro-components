@@ -466,6 +466,121 @@ export interface ProFormListConfig {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 页面容器                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 内容区宽度。
+ * `Fixed` 收窄到 1152px 并居中 —— 和源码一样，**只在 `layout: 'top'` 下才收窄**：
+ * 侧边布局本来就没有「太宽」的问题，收窄反而浪费横向空间。
+ */
+export type ProContentWidth = 'Fluid' | 'Fixed'
+
+/** 面包屑项 */
+export interface ProBreadcrumbItem {
+  title: string
+  /** 有 path 就是链接形态，点击触发 `breadcrumb-click`（本组件不碰路由） */
+  path?: string
+  /** 强制当成当前页。默认最后一项是当前页 */
+  current?: boolean
+}
+
+/** 标题后的标签。写字符串等价于 `{ text }` */
+export interface ProPageTag {
+  text: string
+  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+}
+
+/**
+ * 页头上的 tab。
+ * 源码里这块用的是 antd 的 `TabPaneProps`，字段名是 `tab`；Element Plus 用 `label`。
+ * 两个都收，`label` 优先。
+ */
+export interface ProPageTab {
+  key: string | number
+  label?: string
+  /** 兼容 ProComponents 写法 */
+  tab?: string
+  disabled?: boolean
+  [key: string]: any
+}
+
+/**
+ * 页头（ElProPageHeader）的 props。
+ *
+ * 与源码的差别只在「React 节点 → 插槽」这一层：凡是 ReactNode 的字段
+ * 都同时留了一个 prop（收字符串/数字）和一个同名插槽（收任意内容），
+ * 名字保持一致，迁移时不用重新记一套。
+ */
+export interface ProPageHeaderProps {
+  /** 标题。传 `false` 表示不渲染标题文字（面包屑、说明、tab 还在） */
+  title?: string | false
+  subTitle?: string
+  /** 标题下的一行说明。也可以用默认插槽给它更复杂的内容 */
+  content?: string
+  /** 标题行右侧的操作区 */
+  extra?: string
+  /** 头像地址 */
+  avatar?: string
+  /** 标题后的标签 */
+  tags?: (string | ProPageTag)[]
+  /**
+   * 返回按钮。
+   * - 不传：有 `@back` 监听时用内置左箭头
+   * - `false`：即使监听了 `@back` 也不显示
+   * - 要换图标用 `#backIcon` 插槽
+   */
+  backIcon?: boolean
+  breadcrumb?: ProBreadcrumbItem[]
+  /**
+   * `false` 不渲染面包屑；传函数可以完全接管（返回 `null` 同样是不渲染）。
+   * 想直接写模板就用 `#breadcrumb` 插槽。
+   */
+  breadcrumbRender?: false | ((items: ProBreadcrumbItem[]) => VNode | null)
+  /** 透明背景。源码的 PageHeader 默认就是透明的 @default true */
+  ghost?: boolean
+  contentWidth?: ProContentWidth
+  layout?: 'side' | 'top' | 'mix'
+}
+
+/**
+ * 页面容器（ElProPageContainer）的 props。
+ *
+ * 结构照源码：`PageHeader`（可吸顶）+ `GridContent`（管内容宽度）+ 底部 `FooterToolbar`，
+ * tab 挂在 PageHeader 的 footer 位置，loading 顶掉内容区而不是整个页面。
+ */
+export interface ProPageContainerProps extends ProPageHeaderProps {
+  /** 说明行右侧。通常放一个小图表或统计 */
+  extraContent?: string | VNode
+  /**
+   * 页头的自定义渲染。
+   * - 不传：用内置 PageHeader
+   * - `false`：整个页头不要（等价于源码的 `pageHeaderRender={false}`）
+   * - 函数：拿本组件的全部 props（含 `header` 覆盖后的结果）自己渲染
+   */
+  pageHeaderRender?: boolean | ((payload: Record<string, any>) => VNode)
+  /** 逐项覆盖 PageHeader 的 props（浅合并，优先级高于本组件的同名字段） */
+  header?: Record<string, any>
+  /** 只顶掉内容区，页头保留 */
+  loading?: boolean
+  /** 把页头钉在顶部 */
+  fixedHeader?: boolean
+  /** 透传给 el-affix。`offset` 也在这里给 */
+  affixProps?: Record<string, any>
+  tabList?: ProPageTab[]
+  /** 当前 tab。配 `v-model:tabActiveKey` */
+  tabActiveKey?: string | number
+  /** 透传给 el-tabs */
+  tabProps?: Record<string, any>
+  /** 透传给底部工具条 */
+  footerToolBarProps?: Record<string, any>
+  /** 内容区容器（不是页面内容本身）的样式 */
+  childrenContentStyle?: CSSProperties
+  /** 透传给 el-watermark，给了才出现 */
+  waterMarkProps?: Record<string, any>
+}
+
+/* -------------------------------------------------------------------------- */
 /* 行内编辑                                                                    */
 /* -------------------------------------------------------------------------- */
 /**

@@ -107,6 +107,8 @@ type ProRequest<T> = (
 | `ElProModalForm` / `ElProDrawerForm` | 同一套表单放进弹窗 / 抽屉，提交成功才关窗 |
 | `ElProDescriptions` | 同一份 columns 生成详情页 |
 | `ElProLayout` | 侧边菜单 + 面包屑外壳 |
+| `ElProPageContainer` | 页面容器：页头（可吸顶）+ 内容区（可限宽）+ 底部固定操作条 |
+| `ElProPageHeader` / `ElProFooterToolbar` | 上面那个拆开的两块，也可以单独用 |
 | `ElProCard` | 结构化头部 + 折叠 + 嵌套分组 + 标签页 |
 | `ElProStatistic` / `ElProStatisticCard` / `ElProStatisticCardGroup` | 指标卡：数值 + 趋势 + 图表位，几张拼一条 |
 | `ElProCheckCard` / `ElProCheckCardGroup` | 整块可点的卡片，做单选/多选 |
@@ -434,6 +436,72 @@ async function create(values: Record<string, any>) {
 只负责「长什么样」，不 import `vue-router`。跳转交给 `el-menu` 的 `router` 模式，或自己监听 `@select`。
 面包屑从菜单树自动推导，详情页这类匹配不到菜单的路径会退化为最长前缀匹配。
 
+根节点上还挂了一个 CSS 变量 `--el-pro-sider-width`（折叠时会变），给底部固定工具条避让侧栏用。
+
+### ElProPageContainer
+
+`ElProLayout` 管「外面那圈」，`ElProPageContainer` 管「里面这一页怎么排」。结构照 `pro-components` 的
+`PageContainer`：页头 + 内容区 + 底部固定条，tab 挂在页头底部。
+
+```vue
+<ElProPageContainer
+  v-model:tab-active-key="tab"
+  title="用户管理"
+  sub-title="列表页"
+  :tags="[{ text: '运行中', type: 'success' }]"
+  :breadcrumb="[{ title: '首页', path: '/' }, { title: '用户管理' }]"
+  content="页头、内容区、底部条都由容器提供，表格只管列和接口。"
+  tab-list="[{ key: 'all', label: '全部' }]"
+  fixed-header
+  :loading="loading"
+  :footer-tool-bar-props="{ offsetLeft: 'var(--el-pro-sider-width, 0px)' }"
+  @back="router.back()"
+>
+  <template #extra>
+    <ElButton size="small">新建</ElButton>
+  </template>
+
+  <template #footerExtra>已选 {{ selected.length }} 项</template>
+  <template #footer>
+    <ElButton type="primary" size="small">保存</ElButton>
+  </template>
+
+  <ElProTable :columns="columns" :request="request" />
+</ElProPageContainer>
+```
+
+![页面容器](docs/screenshots/page-container.png)
+
+| 属性 | 说明 |
+| --- | --- |
+| `title` / `subTitle` / `tags` / `avatar` | 标题行。`title: false` 表示不要标题文字（面包屑、说明、tab 还在） |
+| `extra` | 标题行右侧 |
+| `content` / `extraContent` | 说明行：左边一段话，右边一个附加区（窄了自动竖排） |
+| `breadcrumb` | `[{ title, path?, current? }]`，**不依赖路由**，最后一项默认当当前页 |
+| `breadcrumbRender` | `false` 不渲染面包屑；传函数完全接管（返回 `null` 也等于不渲染） |
+| `tabList` / `tabActiveKey` / `tabProps` | 页头底部的 tab，配 `v-model:tab-active-key` |
+| `loading` | **只顶掉内容区**，页头和 tab 留着，切页不闪 |
+| `fixedHeader` / `affixProps` | 页头吸顶（`el-affix`），`affixProps.offset` 就是吸顶偏移 |
+| `contentWidth` / `layout` | `Fixed` + `layout: 'top'` 才收窄到 1152px，和源码一致 |
+| `pageHeaderRender` | `false` 整块页头不要；传函数自己渲染 |
+| `header` | 逐项覆盖页头 props（浅合并，优先级更高） |
+| `waterMarkProps` | 给了才套 `el-watermark` |
+| `footerToolBarProps` | 透传给底部工具条（`offsetLeft` / `zIndex` / `fixed` / `teleport`） |
+
+插槽：`#extra`（标题行右侧）、`#content` / `#extraContent`（说明行）、`#tabBarExtra`、
+`#header`（整块页头自定义）、`#footerExtra` / `#footer`（底部固定条）、`#loading`。
+`title` / `subTitle` / `tags` / `avatar` / `backIcon` / `breadcrumb` 这几个插槽会原样转交给页头。
+
+三个值得注意的行为：
+
+- **返回按钮由 `@back` 的监听决定**，不是一个 show 开关。源码就是这么判的（`if (!backIcon || !onBack) return null`），
+  不监听就永远不出现。想强制关掉用 `:back-icon="false"`，想换图标用 `#backIcon` 插槽。
+- **页头一个字段都没有时整块不渲染**，内容区会自己补上上边距，所以别在外层再手写间距。
+- **底部条是 `fixed` 的**。侧边布局里一定要传 `offsetLeft`，否则会盖住菜单；
+  最省事的写法是 `offsetLeft: 'var(--el-pro-sider-width, 0px)'`，跟着菜单折叠自动变。
+
+`ElProFooterToolbar` 单独用也成立（比如塞进一张卡片里，这时传 `:fixed="false"`）。
+
 ### ElProCard
 
 ```vue
@@ -653,6 +721,10 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - **布尔 prop 的「缺席」会被转成 `false`，不是 `undefined`。** 弹窗表单要靠 `open` 是否传过来区分受控 / 非受控，
   不显式写 `open: undefined` 时，非受控模式永远被当成受控：点 trigger 会 emit `update:open`，但没人接，窗就是打不开，**且不报错**。
   凡是用「undefined 表示没传」的布尔 prop，都要在 `withDefaults` 里写上 `xxx: undefined`。
+- **`false | 函数` 这种联合类型一样会被 cast 成 `false`。** 类型里只要出现 `false` 字面量，编译器就会把它当 Boolean 校验。
+  `PageContainer` 的 `breadcrumbRender` 就中过招：面板上写着「不传 = 用内置面包屑」，实际运行时 `props.breadcrumbRender === false`，
+  面包屑永远不出现，**且不报错**。而且 `extends` 继承来的 prop 要在**子组件自己的** `withDefaults` 里写默认值，写在父类型上不算。
+  自检办法：`document.querySelector('.xxx').__vueParentComponent.props` 直接看运行时真值。
 - **递归组件里写 `<slot :name="动态名">` 取的是它自己的 `$slots`。** 父组件传下来的列插槽在子组件里看不到，
   而且**不报错、只渲染空白**。要按名取父级插槽，得拿 `ctx.slots[name]` 自己渲染成组件（见 `TableColumnNode.vue`）。
 
@@ -686,7 +758,7 @@ npm run build       # 打包库产物到 dist/
 npm run typecheck   # 类型检查
 ```
 
-playground 支持 `?page=/users`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/query-filter`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
+playground 支持 `?page=/users`、`/page-container`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/query-filter`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
 
 demo 本身也按「壳 / 页 / 数据」拆开了，加一个示例只动 `pages/` 一个文件：
 
@@ -736,6 +808,7 @@ src/
 │   ├── ElProForm/        # ElProForm + ElProModalForm / ElProDrawerForm（共用 useFormContainer）
 │   ├── ElProDescriptions/
 │   ├── ElProLayout/
+│   ├── ElProPageContainer/ # 页面骨架：PageContainer / PageHeader / FooterToolbar
 │   ├── ElProCard/        # ElProCard / ElProCheckCard(Group) / ElProStatistic(Group)
 │   ├── ElProList/
 │   └── ElProSkeleton/

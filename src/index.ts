@@ -5,6 +5,9 @@ import ElProForm from './components/ElProForm/ElProForm.vue'
 import ElProModalForm from './components/ElProForm/ElProModalForm.vue'
 import ElProDrawerForm from './components/ElProForm/ElProDrawerForm.vue'
 import ElProQueryFilter from './components/ElProQueryFilter/ElProQueryFilter.vue'
+import ElProPageContainer from './components/ElProPageContainer/ElProPageContainer.vue'
+import ElProPageHeader from './components/ElProPageContainer/ElProPageHeader.vue'
+import ElProFooterToolbar from './components/ElProPageContainer/ElProFooterToolbar.vue'
 import ElProTable from './components/ElProTable/ElProTable.vue'
 import ElProEditableTable from './components/ElProTable/ElProEditableTable.vue'
 import ElProCard from './components/ElProCard/ElProCard.vue'
@@ -27,6 +30,9 @@ export {
   ElProTable,
   ElProEditableTable,
   ElProQueryFilter,
+  ElProPageContainer,
+  ElProPageHeader,
+  ElProFooterToolbar,
   ElProCard,
   ElProCheckCard,
   ElProCheckCardGroup,
@@ -80,6 +86,9 @@ const components = [
   ElProTable,
   ElProEditableTable,
   ElProQueryFilter,
+  ElProPageContainer,
+  ElProPageHeader,
+  ElProFooterToolbar,
   ElProForm,
   ElProModalForm,
   ElProDrawerForm,

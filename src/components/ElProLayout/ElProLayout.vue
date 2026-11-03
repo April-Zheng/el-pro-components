@@ -88,10 +88,21 @@ const breadcrumbs = computed(() => {
 const siderStyle = computed(() => ({
   width: `${collapsed.value ? props.collapsedWidth : props.siderWidth}px`,
 }))
+
+/**
+ * 把当前侧栏宽度挂成 CSS 变量。
+ * 给底部固定工具条（ElProFooterToolbar 的 offsetLeft）用 —— 它钉在视口上，
+ * 得知道左边被菜单占了多少，而这个值只有布局自己清楚。
+ */
+const layoutStyle = computed(() => ({
+  '--el-pro-sider-width': props.hideSider
+    ? '0px'
+    : `${collapsed.value ? props.collapsedWidth : props.siderWidth}px`,
+}))
 </script>
 
 <template>
-  <div class="el-pro-layout" :class="{ 'is-collapsed': collapsed }">
+  <div class="el-pro-layout" :class="{ 'is-collapsed': collapsed }" :style="layoutStyle">
     <aside v-if="!hideSider" class="el-pro-layout__sider" :style="siderStyle">
       <div class="el-pro-layout__logo">
         <slot name="logo" :collapsed="collapsed">
