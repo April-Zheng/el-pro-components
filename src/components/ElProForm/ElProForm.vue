@@ -9,6 +9,7 @@ import { computed, ref } from 'vue'
 import { ElButton, ElCol, ElDivider, ElForm, ElFormItem, ElRow } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import FormField from '../../fields/FormField.vue'
+import ProFormList from './ProFormList.vue'
 import type { ProColumn } from '../../types'
 
 defineOptions({ name: 'ElProForm' })
@@ -103,6 +104,28 @@ defineExpose({
       <template v-for="col in formColumns" :key="col.prop ?? col.label">
         <ElCol v-if="col.valueType === 'divider'" :span="24">
           <ElDivider content-position="left" class="el-pro-form__divider">{{ col.label }}</ElDivider>
+        </ElCol>
+
+        <!--
+          字段组单独成一支：它要的是**整个 model**（自己往 model[prop] 里塞数组），
+          而普通字段只要自己那个值，走 v-model 就够了。
+        -->
+        <ElCol v-else-if="col.valueType === 'formList'" :span="col.formSpan ?? 24">
+          <ElFormItem
+            :label="col.label"
+            :prop="col.prop"
+            :rules="col.rules"
+            v-bind="col.formItemProps"
+          >
+            <ProFormList
+              :model="model"
+              :prop="col.prop!"
+              :columns="col.children ?? []"
+              :config="col.formListProps"
+              :span="col.formListProps?.span"
+              :gutter="col.formListProps?.gutter ?? gutter"
+            />
+          </ElFormItem>
         </ElCol>
 
         <ElCol v-else :span="getSpan(col)">

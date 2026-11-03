@@ -81,6 +81,12 @@ export type ValueType =
   | 'index'
   | 'indexBorder'
   | 'option'
+  /* 复合 */
+  /**
+   * 可增删的字段组：值是对象数组，每一项按 `children` 渲染一张子表单。
+   * 只作用于表单，没有对应的展示形态（展示请用 `cellComponent` 或 `formatter`）。
+   */
+  | 'formList'
 
 /** valueEnum 的单项。也可以直接写字符串（视为只有 text）。 */
 export type ValueEnumItem =
@@ -375,10 +381,34 @@ export interface ProDrawerFormProps extends ProFormContainerProps {
   drawerSize?: string | number
 }
 
+/**
+ * 字段组（`valueType: 'formList'`）的配置。
+ *
+ * 校验能用的关键在同一件事上：每项的 `el-form-item` 用**带下标的路径**（`contacts.0.name`）
+ * 挂到根表单上，所以 `ElProForm.validate()` 会连嵌套项一起校验，不需要额外写规则聚合。
+ */
+export interface ProFormListConfig {
+  /** 添加按钮文案 @default '添加一项' */
+  addText?: string
+  /** 最少几项。少于等于这个值时删除按钮禁用；初始不足也会补齐 @default 0 */
+  min?: number
+  /** 最多几项。达到后添加按钮禁用 @default Infinity */
+  max?: number
+  /** 每项是否可复制 @default false */
+  copyable?: boolean
+  /** 新增一项的初值。不传就是 `{}` */
+  creator?: (index: number) => Record<string, any>
+  /** 每项的标题。不传就是「第 N 项」 */
+  itemTitle?: (item: Record<string, any>, index: number) => string
+  /** 这一列在表单里占几格，会同时作用于外框和每项内部 @default 12 */
+  span?: number
+  /** 每项内部的栅格间距 @default 16 */
+  gutter?: number
+}
+
 /* -------------------------------------------------------------------------- */
 /* 行内编辑                                                                    */
 /* -------------------------------------------------------------------------- */
-
 /**
  * 可编辑表格的配置。挂在 ElProTable 的 `editable` 上，
  * 或直接用 ElProEditableTable（它只是把 editable 预置好的薄壳）。
@@ -519,12 +549,14 @@ export interface ProColumn<T = any> {
   formItemProps?: Record<string, any>
 
   /**
-   * 多级表头：有 `children` 时这一列变成分组表头，自己不产生单元格。
-   *
-   * 分组列不参与列设置的拖拽与固定（el-table 也没法固定「分组下的子列」），
-   * 但它下面的叶子列可以在面板里勾选显隐。
+   * 子列。两种用法，按 `valueType` 区分：
+   * - 表格里：这一列变成**分组表头**，自己不产生单元格，不参与拖拽/固定
+   * - 表单里配 `valueType: 'formList'`：这是**每一项**的字段定义
    */
   children?: ProColumn<T>[]
+
+  /** `valueType: 'formList'` 时的配置 */
+  formListProps?: ProFormListConfig
 
   /**
    * 可编辑表格里这一列能否编辑。

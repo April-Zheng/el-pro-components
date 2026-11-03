@@ -235,6 +235,44 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 
 实例方法：`validate()`、`reset()`、`clearValidate()`、`submit()`。
 
+#### 字段组（formList）
+
+`valueType: 'formList'` 把一列变成「可增删的对象数组」，`children` 是每一项里的字段：
+
+```ts
+{
+  prop: 'contacts',
+  label: '联系人',
+  valueType: 'formList',
+  formSpan: 24,
+  // 组自己也要校验时，记得写 type: 'array'，否则 async-validator 不会按键长判空
+  rules: [{ required: true, type: 'array', message: '至少需要一位联系人' }],
+  children: [
+    { prop: 'name', label: '姓名', valueType: 'text', formSpan: 8, rules: [{ required: true, message: '请输入姓名' }] },
+    { prop: 'phone', label: '电话', valueType: 'text', formSpan: 8 },
+  ],
+  formListProps: { min: 1, max: 3, copyable: true, addText: '添加联系人' },
+}
+```
+
+**校验是怎么跑的**：每一项里的 `el-form-item` 都还挂在**根表单**上（逐层 inject 到的都是同一个 `el-form`），
+`prop` 写成带下标的路径 `contacts.0.name`。所以 `ElProForm.validate()` 天然会连嵌套项一起校验，
+不需要把子规则收集起来再聚合——这也是为什么 `validate()` 的返回值在字段组场景下依然可信。
+
+| `formListProps` | 说明 |
+| --- | --- |
+| `min` | 最少几项。初始不足会**自动补齐**，等于这个数时删除按钮禁用。默认 `0` |
+| `max` | 最多几项，达到后添加按钮禁用。默认不限 |
+| `copyable` | 每项可复制（插在原项后面） |
+| `creator` | 新增一项的初值工厂，不传就是 `{}` |
+| `itemTitle` | 每项标题，默认「第 N 项」 |
+| `span` / `gutter` | 每项内部字段的默认栅格与间距 |
+
+有一个坑值得先说：**下标会随增删漂移**。所以行的 `v-for` key 用的是 Symbol（跟着 `JSON.stringify` 一起被忽略，不会混进提交数据），
+删掉中间一项后剩下的输入框不会跟错行。如果你给 `creator` 传了对象，也别在里面放 `__key` 之类的字段名——用不到，而且会提交上去。
+
+![字段组](docs/screenshots/form-list.png)
+
 ### ElProModalForm / ElProDrawerForm
 
 ```vue
@@ -487,6 +525,8 @@ const STATUS_ENUM = {
 
 > 没写 `valueType` 但配了 `valueEnum` 时，按 `select` / `tag` 语义处理——和 ProComponents 的行为一致。
 
+`formList` 只在表单里有意义：它是「一组字段」而不是一个值，表格/详情里要展示请用 `cellComponent` 或 `formatter`。
+
 ## 一个常见场景：表格显示到秒、搜索用日期区间
 
 ```ts
@@ -551,10 +591,11 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] `Skeleton` 的 `result` 版式，`second` / `digitRange` 两个 valueType
 - [x] **表格多级表头 + 默认插槽**（列设置里按组显隐）
 - [x] **`ElProModalForm` / `ElProDrawerForm`**（校验 → 提交 → 成功才关窗）
+- [x] **列表型字段 `formList`**（增删 / 复制 / 嵌套校验）
+- [ ] 表单分组 `group` 与字段联动 `dependency`
 - [ ] 列设置的分组拖拽（现在有分组就关掉拖拽）
 - [ ] 表格请求层补齐 `postData` / `onLoad` / `polling` / `debounceTime`
 - [ ] 表单布局变体：`StepsForm` / `QueryFilter` / `LightFilter`
-- [ ] 表单分组 `group` 与列表型字段 `formList` / 字段联动 `dependency`
 - [ ] `QueryFilter`（表格页顶部独立的筛选区）
 - [ ] 导出当前列定义对应的 CSV
 - [ ] 行拖拽排序（`sortablejs` 可选依赖）
@@ -568,7 +609,7 @@ npm run build       # 打包库产物到 dist/
 npm run typecheck   # 类型检查
 ```
 
-playground 支持 `?page=/users`、`/grouped`、`/form`、`/form-container`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
+playground 支持 `?page=/users`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
 
 demo 本身也按「壳 / 页 / 数据」拆开了，加一个示例只动 `pages/` 一个文件：
 
@@ -587,6 +628,7 @@ demo/
     ├── UsersPage.vue          # 列配置驱动的 CRUD 主场景
     ├── FormPage.vue
     ├── FormContainerPage.vue  # 弹窗 / 抽屉表单
+    ├── FormListPage.vue       # 字段组（可增删）
     ├── DetailPage.vue
     ├── CardPage.vue
     ├── ListPage.vue
