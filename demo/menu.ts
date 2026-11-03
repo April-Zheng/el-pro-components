@@ -12,6 +12,7 @@ export const menus: ProLayoutMenuItem[] = [
   { title: '用户列表', path: '/users', icon: IconList },
   { title: '分组表头', path: '/grouped' },
   { title: '表单示例', path: '/form' },
+  { title: '弹窗/抽屉表单', path: '/form-container' },
   { title: '详情示例', path: '/detail' },
   { title: '卡片示例', path: '/card' },
   { title: '指标卡', path: '/statistic' },

@@ -305,6 +305,77 @@ export type ProDescriptionsRequest<T = Record<string, any>> = (
 ) => Promise<ProDescriptionsRequestResult<T>> | ProDescriptionsRequestResult<T>
 
 /* -------------------------------------------------------------------------- */
+/* 表单容器                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** 提交钩子的返回值。返回 Promise 时会等它 resolve 才关窗，reject 则保持打开 */
+export type ProFormFinish = (values: Record<string, any>) => void | Promise<void>
+
+/**
+ * 弹窗表单 / 抽屉表单的公共契约。
+ *
+ * 和 ElProForm 的唯一实质差别是「这份数据归谁」：
+ * - 传 `model`：调用方持有响应式对象，组件只读写、**不会重置它**
+ *   （编辑已有行时，草稿隔离由调用方自己做，它比组件更清楚哪些字段该丢）
+ * - 不传 `model`：组件内部建一份草稿，每次打开都从 `initialValues` 重新拷一份，
+ *   取消掉的输入不会残留到下一次
+ */
+export interface ProFormContainerProps {
+  columns: ProColumn[]
+  /** 受控数据。传了就一直用这一份，组件不克隆也不重置 */
+  model?: Record<string, any>
+  /** 内部草稿的初值。只在没传 `model` 时生效 */
+  initialValues?: Record<string, any>
+  title?: string
+  /** 受控开关，配 `v-model:open` 用 */
+  open?: boolean
+  /** 非受控时的初始开关状态 @default false */
+  defaultOpen?: boolean
+
+  /* ----- 以下透传给 ElProForm ----- */
+  /** 默认占几格（24 栅格） @default 12 */
+  span?: number
+  gutter?: number
+  labelWidth?: string | number
+  labelPosition?: 'left' | 'right' | 'top'
+  disabled?: boolean
+  /** 表单控件尺寸。注意抽屉的宽度用 `drawerSize`，别和这个混了 */
+  size?: 'large' | 'default' | 'small'
+
+  /* ----- 底部按钮 ----- */
+  submitText?: string
+  cancelText?: string
+  /** 外部已知的提交中状态，会和内部状态一起控制按钮 loading */
+  loading?: boolean
+
+  /**
+   * 校验通过后调用。**只有它 resolve 才关窗**；reject 就留在原地、
+   * 把错误交给 `finish-error` 事件。这不是异常分支，是正常流程：
+   * 服务端拒绝一次，用户改完就地重提，不用关掉再开一遍。
+   */
+  onFinish?: ProFormFinish
+
+  /** 弹窗容器自身的配置，原样透传给 ElDialog / ElDrawer，用来覆盖单个属性 */
+  modalProps?: Record<string, any>
+  drawerProps?: Record<string, any>
+}
+
+export interface ProModalFormProps extends ProFormContainerProps {
+  /** 弹窗宽度 @default '560px' */
+  width?: string | number
+  fullscreen?: boolean
+  /** 距顶距离，默认交给 el-dialog 的 15vh */
+  top?: string
+}
+
+export interface ProDrawerFormProps extends ProFormContainerProps {
+  /** 抽屉方向 @default 'rtl' */
+  direction?: 'rtl' | 'ltr' | 'ttb' | 'btt'
+  /** 抽屉尺寸（宽度或高度） @default '480px' */
+  drawerSize?: string | number
+}
+
+/* -------------------------------------------------------------------------- */
 /* 行内编辑                                                                    */
 /* -------------------------------------------------------------------------- */
 

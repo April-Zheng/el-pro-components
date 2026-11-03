@@ -2,6 +2,8 @@ import type { App, Plugin } from 'vue'
 import ElProLayout from './components/ElProLayout/ElProLayout.vue'
 import ElProDescriptions from './components/ElProDescriptions/ElProDescriptions.vue'
 import ElProForm from './components/ElProForm/ElProForm.vue'
+import ElProModalForm from './components/ElProForm/ElProModalForm.vue'
+import ElProDrawerForm from './components/ElProForm/ElProDrawerForm.vue'
 import ElProTable from './components/ElProTable/ElProTable.vue'
 import ElProEditableTable from './components/ElProTable/ElProEditableTable.vue'
 import ElProCard from './components/ElProCard/ElProCard.vue'
@@ -19,6 +21,8 @@ export {
   ElProLayout,
   ElProDescriptions,
   ElProForm,
+  ElProModalForm,
+  ElProDrawerForm,
   ElProTable,
   ElProEditableTable,
   ElProCard,
@@ -37,6 +41,9 @@ export {
 
 export { useTable, pickSearchColumns } from './core/useTable'
 export type { ProTableAction, UseTableOptions } from './core/useTable'
+
+/** 表单实例。弹窗 / 抽屉表单的 `formRef` 就是这个类型 */
+export type { ProFormInstance } from './components/ElProForm/useFormContainer'
 
 export { applyColumnOrder, isSettableColumn, moveItem, sortPropsByFixed } from './core/column'
 export type { ColumnFixed, ColumnFixedState } from './core/column'
@@ -67,6 +74,8 @@ const components = [
   ElProTable,
   ElProEditableTable,
   ElProForm,
+  ElProModalForm,
+  ElProDrawerForm,
   ElProDescriptions,
   ElProLayout,
   ElProCard,

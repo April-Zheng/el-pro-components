@@ -103,6 +103,7 @@ type ProRequest<T> = (
 | `ElProTable` | 列配置驱动的 CRUD 表格（搜索栏 / 列设置 / 分页 / 排序 / 竞态） |
 | `ElProEditableTable` | 上面那个把「行内编辑」预置好的薄壳 |
 | `ElProForm` | 同一份 columns 生成表单 |
+| `ElProModalForm` / `ElProDrawerForm` | 同一套表单放进弹窗 / 抽屉，提交成功才关窗 |
 | `ElProDescriptions` | 同一份 columns 生成详情页 |
 | `ElProLayout` | 侧边菜单 + 面包屑外壳 |
 | `ElProCard` | 结构化头部 + 折叠 + 嵌套分组 + 标签页 |
@@ -233,6 +234,50 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 `valueType: 'divider'` 可以插分组标题。
 
 实例方法：`validate()`、`reset()`、`clearValidate()`、`submit()`。
+
+### ElProModalForm / ElProDrawerForm
+
+```vue
+<ElProModalForm title="新建项目" :columns="columns" @finish="create" @finish-error="onError">
+  <template #trigger>
+    <ElButton type="primary">新建项目</ElButton>
+  </template>
+</ElProModalForm>
+```
+
+```ts
+async function create(values: Record<string, any>) {
+  await api.create(values) // 抛错 = 本次提交失败
+}
+```
+
+它只负责一件容易写错的事：**先校验，再提交，成功了才关窗**。`@finish` 返回 Promise，resolve 才关；reject 就留在原地，让用户改完就地重提——这不是异常分支，是正常流程，所以窗不关、输入不清。错误本身交给 `@finish-error`，想弹 toast 还是画在弹窗里都行。
+
+抽屉版是同一套行为、换个外壳，字段多到弹窗装不下时用：
+
+```vue
+<ElProDrawerForm v-model:open="open" title="编辑" :columns="columns" :initial-values="row" @finish="save" />
+```
+
+两种开窗方式：
+
+- `#trigger` 插槽：点它开窗，最省事
+- `v-model:open` / `ref.open()`：开关交给父组件，或要在别处触发
+
+| 属性 | 说明 |
+| --- | --- |
+| `columns` | 同 `ElProForm` |
+| `model` | 受控数据。传了就一直用这一份，组件**不会重置它** |
+| `initialValues` | 内部草稿的初值，只在没传 `model` 时生效。**每次打开都重新拷一份**，所以取消掉的输入不会残留到下一次 |
+| `onFinish` | 校验通过后调用，即模板里的 `@finish`。返回 Promise 时等它 resolve 才关窗，reject 则保持打开 |
+| `loading` | 外部已知的提交中状态，和内部状态一起控制按钮 loading |
+| `width` / `drawerSize` | 弹窗宽度 / 抽屉尺寸。注意抽屉的宽度是 `drawerSize`——`size` 是**表单控件尺寸**，两个 size 混用会改半天没反应 |
+
+事件：`@finish`、`@finish-error`、`@cancel`、`@open-change`、`@invalid`（校验没过）。实例方法：`open()`、`close()`、`submit()`、`getValues()`。
+
+![弹窗表单](docs/screenshots/modal-form.png)
+
+「数据归谁」这条线值得单独记一下：编辑已有行时传 `model`（草稿隔离你比组件更清楚怎么做），一次性新建就交给 `initialValues`——分开是因为两种情况对「取消」的期待不一样。
 
 ### ElProDescriptions
 
@@ -489,6 +534,11 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - **`el-table` 的 `data` 是深度响应式的。** 它内部 `const _data = ref([])`，所以插槽里拿到的 `row` 是原始行对象的 **Proxy**。
   后果：`data.indexOf(row)` 永远 -1，`r !== row` 永远成立，`WeakMap` 按引用存 key 也永远命中不了。
   需要行标识就**认字段**（`row[rowKey]`），新增行没有 id 时把临时 key 写在行对象上（本项目用 `Symbol` 键，不进 JSON）。
+- **布尔 prop 的「缺席」会被转成 `false`，不是 `undefined`。** 弹窗表单要靠 `open` 是否传过来区分受控 / 非受控，
+  不显式写 `open: undefined` 时，非受控模式永远被当成受控：点 trigger 会 emit `update:open`，但没人接，窗就是打不开，**且不报错**。
+  凡是用「undefined 表示没传」的布尔 prop，都要在 `withDefaults` 里写上 `xxx: undefined`。
+- **递归组件里写 `<slot :name="动态名">` 取的是它自己的 `$slots`。** 父组件传下来的列插槽在子组件里看不到，
+  而且**不报错、只渲染空白**。要按名取父级插槽，得拿 `ctx.slots[name]` 自己渲染成组件（见 `TableColumnNode.vue`）。
 
 ## Roadmap
 
@@ -500,9 +550,10 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] `ElProDescriptions` 支持 `request` 与响应式 `column`
 - [x] `Skeleton` 的 `result` 版式，`second` / `digitRange` 两个 valueType
 - [x] **表格多级表头 + 默认插槽**（列设置里按组显隐）
+- [x] **`ElProModalForm` / `ElProDrawerForm`**（校验 → 提交 → 成功才关窗）
 - [ ] 列设置的分组拖拽（现在有分组就关掉拖拽）
 - [ ] 表格请求层补齐 `postData` / `onLoad` / `polling` / `debounceTime`
-- [ ] 表单布局变体：`StepsForm` / `ModalForm` / `DrawerForm`
+- [ ] 表单布局变体：`StepsForm` / `QueryFilter` / `LightFilter`
 - [ ] 表单分组 `group` 与列表型字段 `formList` / 字段联动 `dependency`
 - [ ] `QueryFilter`（表格页顶部独立的筛选区）
 - [ ] 导出当前列定义对应的 CSV
@@ -517,7 +568,7 @@ npm run build       # 打包库产物到 dist/
 npm run typecheck   # 类型检查
 ```
 
-playground 支持 `?page=/users`、`/form`、`/detail`、`/card`、`/list`、`/editable` 直接打开对应页面。
+playground 支持 `?page=/users`、`/grouped`、`/form`、`/form-container`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
 
 demo 本身也按「壳 / 页 / 数据」拆开了，加一个示例只动 `pages/` 一个文件：
 
@@ -535,6 +586,7 @@ demo/
 └── pages/
     ├── UsersPage.vue          # 列配置驱动的 CRUD 主场景
     ├── FormPage.vue
+    ├── FormContainerPage.vue  # 弹窗 / 抽屉表单
     ├── DetailPage.vue
     ├── CardPage.vue
     ├── ListPage.vue
@@ -558,7 +610,7 @@ src/
 │   └── FormField.vue     # 输入侧外壳（写）
 ├── components/
 │   ├── ElProTable/       # ElProTable + TableColumnNode（递归列）+ SearchForm + TableToolbar + ColumnSetting
-│   ├── ElProForm/
+│   ├── ElProForm/        # ElProForm + ElProModalForm / ElProDrawerForm（共用 useFormContainer）
 │   ├── ElProDescriptions/
 │   ├── ElProLayout/
 │   ├── ElProCard/        # ElProCard / ElProCheckCard(Group) / ElProStatistic(Group)
