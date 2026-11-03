@@ -3,15 +3,40 @@ import ElProLayout from './components/ElProLayout/ElProLayout.vue'
 import ElProDescriptions from './components/ElProDescriptions/ElProDescriptions.vue'
 import ElProForm from './components/ElProForm/ElProForm.vue'
 import ElProTable from './components/ElProTable/ElProTable.vue'
+import ElProEditableTable from './components/ElProTable/ElProEditableTable.vue'
+import ElProCard from './components/ElProCard/ElProCard.vue'
+import ElProCheckCard from './components/ElProCard/ElProCheckCard.vue'
+import ElProCheckCardGroup from './components/ElProCard/ElProCheckCardGroup.vue'
+import ElProList from './components/ElProList/ElProList.vue'
+import ElProSkeleton from './components/ElProSkeleton/ElProSkeleton.vue'
 import CellRenderer from './fields/CellRenderer.vue'
 import FormField from './fields/FormField.vue'
 
-export { ElProLayout, ElProDescriptions, ElProForm, ElProTable, CellRenderer, FormField }
+export {
+  ElProLayout,
+  ElProDescriptions,
+  ElProForm,
+  ElProTable,
+  ElProEditableTable,
+  ElProCard,
+  ElProCheckCard,
+  ElProCheckCardGroup,
+  ElProList,
+  ElProSkeleton,
+  CellRenderer,
+  FormField,
+}
 
 /* --------------------------------- 内核 --------------------------------- */
 
 export { useTable, pickSearchColumns } from './core/useTable'
 export type { ProTableAction, UseTableOptions } from './core/useTable'
+
+export { applyColumnOrder, isSettableColumn, moveItem, sortPropsByFixed } from './core/column'
+export type { ColumnFixed, ColumnFixedState } from './core/column'
+
+export { BREAKPOINTS, BREAKPOINT_ORDER, normalizeGutter, resolveResponsive, useBreakpoint } from './core/responsive'
+export type { NormalizedGutter } from './core/responsive'
 
 export {
   DISPLAY_ONLY_VALUE_TYPES,
@@ -32,7 +57,18 @@ export * from './types'
 
 /* --------------------------------- 插件 --------------------------------- */
 
-const components = [ElProTable, ElProForm, ElProDescriptions, ElProLayout]
+const components = [
+  ElProTable,
+  ElProEditableTable,
+  ElProForm,
+  ElProDescriptions,
+  ElProLayout,
+  ElProCard,
+  ElProCheckCard,
+  ElProCheckCardGroup,
+  ElProList,
+  ElProSkeleton,
+]
 
 /**
  * 全量安装。也支持按需：

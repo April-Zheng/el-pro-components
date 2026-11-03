@@ -3,6 +3,8 @@
 Element Plus 体系的 CRUD 高阶组件：**由一份 columns 定义，同时驱动搜索栏、表格列、列设置面板、表单和详情页。**
 
 ![表格](docs/screenshots/table.png)
+![卡片](docs/screenshots/card.png)
+![列表](docs/screenshots/list.png)
 
 ## 为什么做这个
 
@@ -94,7 +96,19 @@ type ProRequest<T> = (
 />
 ```
 
-## 四个组件
+## 组件
+
+| 组件 | 一句话 |
+| --- | --- |
+| `ElProTable` | 列配置驱动的 CRUD 表格（搜索栏 / 列设置 / 分页 / 排序 / 竞态） |
+| `ElProEditableTable` | 上面那个把「行内编辑」预置好的薄壳 |
+| `ElProForm` | 同一份 columns 生成表单 |
+| `ElProDescriptions` | 同一份 columns 生成详情页 |
+| `ElProLayout` | 侧边菜单 + 面包屑外壳 |
+| `ElProCard` | 结构化头部 + 折叠 + 嵌套分组 + 标签页 |
+| `ElProCheckCard` / `ElProCheckCardGroup` | 整块可点的卡片，做单选/多选 |
+| `ElProList` | 同一份 columns 生成列表页 / 卡片流 |
+| `ElProSkeleton` | 列表 / 表格 / 详情三种版式的骨架屏 |
 
 ### ElProTable
 
@@ -107,10 +121,30 @@ type ProRequest<T> = (
 | `options` | 工具栏图标开关 `{ reload, density, setting, fullscreen }`，传 `false` 全关 |
 | `selection` | 是否显示多选列 |
 | `pagination` | 分页配置，传 `false` 关闭 |
-| `persistenceKey` | 传了就把列显隐持久化到 localStorage |
+| `persistenceKey` | 传了就把列显隐 / 顺序 / 固定持久化到 localStorage |
+| `columnOrder` | 受控列顺序（prop 数组），配合 `v-model:column-order` |
+| `columnFixed` | 受控固定列（`{ prop: 'left' \| 'right' }`），配合 `v-model:column-fixed` |
 | `paramsAdapter` | 后端参数名转换 |
 
 插槽：`#toolbar`（标题区）、`#toolbarActions`（右侧按钮）、`#batch`（批量操作）、`#empty`、`#${列的 prop}`（列自定义渲染）。
+
+#### 列配置
+
+工具栏的列设置面板（右上角齿轮）做了四件事，状态都跟着 `persistenceKey` 落 localStorage：
+
+| 能力 | 说明 |
+| --- | --- |
+| 显示 / 隐藏 | 勾选框；`index` / `option` 列和 `hideInSetting` 的列不进面板，避免把自己锁死 |
+| 拖拽排序 | 原生 HTML5 拖拽，不引 sortablejs；只重排可设置列，索引列/操作列原地不动 |
+| **固定列首 / 列尾** | 每行右侧两个钉住图标，再点一次同一侧即取消 |
+| 重置 | 显隐、顺序、固定一起回到 `columns` 的原始定义 |
+
+固定列会**连带重排顺序**：el-table 的 `fixed` 是 sticky + 逐列累加 offset，固定列夹在普通列中间会被盖住。所以按「左固定 → 普通 → 右固定」重排，组内保持原相对顺序（`sortPropsByFixed`），并把新顺序写回 `order`。
+
+面板本体是 `ElProTable/ColumnSetting.vue`，它**只上报用户意图**（勾选 / 拖到哪 / 固定到哪），
+三份状态都归 `ElProTable` 所有 —— 面板自己拼新状态会踩 props 快照的坑（同一 tick 连点两次，第二次覆盖第一次）。
+
+![列设置](docs/screenshots/column-setting.png)
 
 通过 ref 拿到的实例方法：
 
@@ -122,6 +156,29 @@ tableRef.value.clearSelected()
 tableRef.value.setPage({ current: 3 })
 tableRef.value.getData()         // 当前页数据，可用于导出
 ```
+
+#### 行内编辑
+
+给 `editable` 就进入编辑态；`ElProEditableTable` 只是把默认值收好的薄壳：
+
+```vue
+<ElProTable
+  :columns="columns"
+  :request="request"
+  :editable="{
+    type: 'single',                 // single：切换行会先保存当前行；multiple：可同时编辑多行
+    onSave: (key, row) => api.save(key, row),
+    onDelete: (key) => api.remove(key),
+  }"
+/>
+```
+
+- 单元格用哪个控件由 `valueType` 决定（`money` → 数字框、`role` → 下拉），和表单是同一套渲染器。
+- `column.editable` 控制哪一列可编辑：不写按 `valueType` 推断（`index` / `option` / `progress` / `image` 之类不进编辑态），也可以传函数按行决定。
+- **保存失败不会丢输入**：`onSave` 返回 `false` 或抛错时，该行留在编辑态、数据不写回。
+- 保存前只改草稿，`data` 里的原对象不动 —— 这样「取消」才有意义。
+- **新增行拿主键**：`onSave` 可以返回保存后的记录（接口回包），返回的对象会合并进该行。返回了主键，这一行才会摆脱内部临时 key（`__new_n`），之后编辑、删除才能拿真实 id 调接口。
+- 新增行没有 id 时用内部临时 key 区分编辑态；临时 key 存在行对象的 `Symbol` 属性上，不会出现在 `JSON.stringify` 或发出去的请求体里。
 
 ### ElProForm
 
@@ -152,6 +209,77 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 
 只负责「长什么样」，不 import `vue-router`。跳转交给 `el-menu` 的 `router` 模式，或自己监听 `@select`。
 面包屑从菜单树自动推导，详情页这类匹配不到菜单的路径会退化为最长前缀匹配。
+
+### ElProCard
+
+```vue
+<ElProCard v-model:collapsed="folded" title="基础信息" sub-title="随用随填" tooltip="标题旁的问号" collapsible>
+  <template #extra>
+    <ElButton link type="primary">更多</ElButton>
+  </template>
+  内容
+</ElProCard>
+```
+
+三个关键能力：
+
+1. **嵌套即布局。** 父卡里放子卡时，父卡 body 自动去 padding、子卡自动去边框 —— 外框由父卡统一承担：
+
+```vue
+<ElProCard title="分组" split="vertical" :gutter="16">
+  <ElProCard title="左" :col-span="12">…</ElProCard>
+  <ElProCard title="右" :col-span="12">…</ElProCard>
+</ElProCard>
+```
+
+`colSpan` 按 24 栅格算（也可以写 `'30%'` / `'320px'`），并按断点响应：
+`:col-span="{ xs: 24, lg: 12 }"`。`split` 画分割线，`gutter` 拉间距。
+
+2. **头部可以换成标签页**，省掉「外层 el-tabs + 里面 N 个 el-card」：
+
+```vue
+<ElProCard v-model:active-key="tab" :tabs="[{ key: 'a', label: '概览' }]">
+  <template #tab-a>…</template>
+</ElProCard>
+```
+
+3. **一套开关**：`ghost`（只当布局容器）、`hoverable`、`boxShadow`、`bordered`、`type="inner"`、`size="small"`、`loading`、`cover`、`actions`。
+
+### ElProCheckCard
+
+```vue
+<ElProCheckCardGroup v-model="plan" :options="planOptions" :column="3" />
+<ElProCheckCardGroup v-model="features" multiple>
+  <ElProCheckCard value="alert" title="告警通知" description="阈值触发时推送到值班群" />
+</ElProCheckCardGroup>
+```
+
+单选传值、多选传数组，组件按 `multiple` 自己判断。`disabled` 可以放在组上（整组禁用）或单张卡上。
+
+### ElProList
+
+```vue
+<ElProList :columns="columns" :request="request" row-key="id" />
+```
+
+`columns` 和表格共用，靠 `listSlot` 决定字段在条目里的角色：
+
+| listSlot | 位置 |
+| --- | --- |
+| `avatar` | 左侧头像/缩略图 |
+| `title` / `subTitle` | 主标题 / 次标题 |
+| `description` | 标签行（自动 flex 换行） |
+| `content` | 标题下的自由区 |
+| `extra` / `aside` | 右侧统计 / 右侧附加说明 |
+| `actions` | 操作区（等价于 `valueType: 'option'`） |
+
+不写 `listSlot` 也能跑：`avatar`/`image` 类型自动进头像位，第一个普通列自动当标题。
+数据来源二选一 —— 给 `request` 走服务端分页，给 `dataSource` 走本地分页。
+`item-type="card"` + `:grid="{ column: 3, gutter: 16 }"` 就是卡片流。
+
+### ElProSkeleton
+
+`type` 取 `list` / `table` / `descriptions` / `grid` / `card`。`ElProCard` 的 `loading` 内部用的就是它。
 
 ## valueType 对照表
 
@@ -236,17 +364,29 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 诚实列出来，这些不是「以后再说」，是当前客观上做不到或没做的：
 
 - **`dateQuarter` / `dateQuarterRange` 表单里降级为月选择器。** Element Plus 没有季度选择器。展示没问题（能正确算出 `2026-Q4`），但选不了季度。需要的话传 `fieldComponent` 自定义。
-- **没有可编辑行（EditableProTable）。** Element Plus 的编辑态更适合用列插槽直接写 `el-input`，硬封装成 schema 反而限制了常见需求。
-- **没有拖拽排序。** 依赖 `sortablejs`，留给使用方按需接入。
-- **`ProCard` / `ProList` / `StepsForm` / `ModalForm` / `LoginForm` 未实现。** 首批只做了最核心的四个。
-- **列设置的排序（拖动调整列顺序）未做。** 目前只能显隐。
+- **行拖拽排序（拖动行改 sort 字段）未做。** 那是业务态，交给 `sortablejs`；列顺序的拖拽是有的。
+- **表单只有一种版式。** `StepsForm` / `ModalForm` / `DrawerForm` / `QueryFilter` / `LoginForm` 还没做，目前用 `ElProForm` + `el-dialog` 自己拼。
+- **`ElProCard` 的 `split` 与 `wrap` 混用不保证好看。** 一行塞多个不同 `colSpan` 又换行时，分割线按 DOM 顺序画，可能出现「行首也带线」。
+- **`ElProList` 没有搜索栏。** 要筛选就用 `ElProTable`，或者自己在 `#header` 里放一个 `ElProForm`。
+- **列设置不支持分组列（嵌套表头）。** pro-components 那套多级表头 + 分组拖拽没搬过来，单层表头够用且不会出现「拖到父节点」的歧义。
+
+## 踩过的坑（改这块之前先看）
+
+- **`el-table` 的 `data` 是深度响应式的。** 它内部 `const _data = ref([])`，所以插槽里拿到的 `row` 是原始行对象的 **Proxy**。
+  后果：`data.indexOf(row)` 永远 -1，`r !== row` 永远成立，`WeakMap` 按引用存 key 也永远命中不了。
+  需要行标识就**认字段**（`row[rowKey]`），新增行没有 id 时把临时 key 写在行对象上（本项目用 `Symbol` 键，不进 JSON）。
 
 ## Roadmap
 
-- [ ] 列设置里支持拖拽调整列顺序
-- [ ] `EditableProTable`（行内编辑）
+- [x] 列设置里拖拽调整列顺序
+- [x] 列设置里固定列首 / 列尾
+- [x] `ElProEditableTable`（行内编辑）
+- [x] `ElProCard` / `ElProCheckCard` / `ElProList` / `ElProSkeleton`
+- [ ] 列设置分组（嵌套表头 + 分组拖拽）
+- [ ] 表单布局变体：`StepsForm` / `ModalForm` / `DrawerForm`
 - [ ] 表单分组 `group` 与列表型字段 `formList`
 - [ ] 导出当前列定义对应的 CSV
+- [ ] 行拖拽排序（`sortablejs` 可选依赖）
 
 ## 开发
 
@@ -257,7 +397,30 @@ npm run build       # 打包库产物到 dist/
 npm run typecheck   # 类型检查
 ```
 
-playground 支持 `?page=/form`、`?page=/detail` 直接打开对应页面。
+playground 支持 `?page=/users`、`/form`、`/detail`、`/card`、`/list`、`/editable` 直接打开对应页面。
+
+demo 本身也按「壳 / 页 / 数据」拆开了，加一个示例只动 `pages/` 一个文件：
+
+```
+demo/
+├── App.vue                    # 布局壳 + 路由分支，不含任何示例业务
+├── menu.ts                    # 侧边菜单 + ?page= 解析
+├── data/
+│   ├── enums.ts               # 角色 / 状态字典
+│   └── mock.ts                # User 类型、87 条假数据、requestUsers、delay
+├── composables/
+│   └── useUserEditor.ts       # 「编辑谁、弹窗开没开」这类页面级状态
+├── components/
+│   └── UserEditDialog.vue     # 新建 / 编辑弹窗（用户页和列表页共用）
+└── pages/
+    ├── UsersPage.vue          # 列配置驱动的 CRUD 主场景
+    ├── FormPage.vue
+    ├── DetailPage.vue
+    ├── CardPage.vue
+    ├── ListPage.vue
+    ├── EditablePage.vue
+    └── PlaceholderPage.vue    # 未实现的菜单项
+```
 
 ## 目录结构
 
@@ -265,15 +428,21 @@ playground 支持 `?page=/form`、`?page=/detail` 直接打开对应页面。
 src/
 ├── core/
 │   ├── valueType.ts    # 格式化内核：值 → 文本/tag/进度，不 import 任何组件
-│   └── useTable.ts     # 请求生命周期：分页/排序/搜索合并 + 竞态
+│   ├── useTable.ts     # 请求生命周期：分页/排序/搜索合并 + 竞态
+│   ├── column.ts       # 列的「可设置 / 可排序」判定与顺序应用
+│   ├── responsive.ts   # 断点订阅 + 响应式取值（colSpan / gutter / grid）
+│   └── cardContext.ts  # 卡片父子关系的 provide/inject 契约
 ├── fields/
 │   ├── CellRenderer.vue  # 展示侧外壳（读）
 │   └── FormField.vue     # 输入侧外壳（写）
 ├── components/
-│   ├── ElProTable/       # ElProTable + SearchForm + TableToolbar
+│   ├── ElProTable/       # ElProTable + ElProEditableTable + SearchForm + TableToolbar + ColumnSetting
 │   ├── ElProForm/
 │   ├── ElProDescriptions/
-│   └── ElProLayout/
+│   ├── ElProLayout/
+│   ├── ElProCard/        # ElProCard / ElProCheckCard / ElProCheckCardGroup
+│   ├── ElProList/
+│   └── ElProSkeleton/
 └── types.ts
 ```
 

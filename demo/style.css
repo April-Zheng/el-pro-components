@@ -36,6 +36,13 @@ body {
   line-height: 1.6;
 }
 
+.demo-p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--el-text-color-regular);
+}
+
 .demo-hint {
   margin-top: 16px;
   padding: 10px 12px;

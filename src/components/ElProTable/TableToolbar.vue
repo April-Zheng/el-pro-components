@@ -2,12 +2,12 @@
 /**
  * 表格工具栏：标题 + 右侧操作区（刷新 / 密度 / 列设置 / 全屏）。
  * 所有开关都能单独关掉，关掉后对应图标不渲染，不留空白。
+ *
+ * 这里只负责「一排图标 + 把面板塞进弹层」，列的显隐/顺序/固定状态和面板 UI
+ * 都在 ColumnSetting.vue 里 —— 两者变化的原因不同，不该混在一个文件。
  */
 import { computed, ref } from 'vue'
 import {
-  ElButton,
-  ElCheckbox,
-  ElCheckboxGroup,
   ElDropdown,
   ElDropdownItem,
   ElDropdownMenu,
@@ -15,6 +15,9 @@ import {
   ElTooltip,
 } from 'element-plus'
 import type { ProColumn, TableSize } from '../../types'
+import { isSettableColumn } from '../../core/column'
+import type { ColumnFixed, ColumnFixedState } from '../../core/column'
+import ColumnSetting from './ColumnSetting.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -22,6 +25,8 @@ const props = withDefaults(
     tooltip?: string
     columns: ProColumn[]
     columnState: Record<string, boolean>
+    /** 用户设置的固定列（prop -> left/right） */
+    columnFixed?: ColumnFixedState
     size?: TableSize
     fullscreen?: boolean
     loading?: boolean
@@ -36,6 +41,7 @@ const props = withDefaults(
     size: 'default',
     fullscreen: false,
     loading: false,
+    columnFixed: () => ({} as ColumnFixedState),
     // 同 ElProTable 里的说明：类型含 Boolean，不给 default 会被 cast 成 false
     options: () => ({ reload: true, density: true, setting: true, fullscreen: true }),
   },
@@ -44,6 +50,10 @@ const props = withDefaults(
 const emit = defineEmits<{
   refresh: []
   'update:columnState': [Record<string, boolean>]
+  'update:columnOrder': [string[]]
+  'update:columnFixed': [ColumnFixedState]
+  /** 请求把某列固定到 left / right（再点一次同位置 = 取消）。状态由 ElProTable 算 */
+  pin: [string, ColumnFixed]
   'update:size': [TableSize]
   'update:fullscreen': [boolean]
 }>()
@@ -62,44 +72,14 @@ const opts = computed(() => {
 
 const settingOpen = ref(false)
 
-/** 可以进列设置的列：排除操作列、索引列、显式排除的 */
-const settableColumns = computed(() =>
-  props.columns.filter(
-    (c) => c.prop && !c.hideInSetting && c.valueType !== 'option' && c.valueType !== 'index' && c.valueType !== 'indexBorder',
-  ),
-)
-
-/** 当前可见列的 prop 列表。columnState 里没有记录的视为可见 */
-const visibleProps = computed({
-  get: () =>
-    settableColumns.value
-      .filter((c) => props.columnState[c.prop!] !== false)
-      .map((c) => c.prop!),
-  set: (keys: string[]) => {
-    const next: Record<string, boolean> = {}
-    for (const c of settableColumns.value) next[c.prop!] = keys.includes(c.prop!)
-    emit('update:columnState', next)
-  },
-})
-
-const allChecked = computed({
-  get: () => visibleProps.value.length === settableColumns.value.length,
-  set: (val: boolean) => {
-    visibleProps.value = val ? settableColumns.value.map((c) => c.prop!) : []
-  },
-})
+/** 一个可设置的列都没有时，齿轮点开是空面板，不如不渲染 */
+const hasSettableColumns = computed(() => props.columns.some(isSettableColumn))
 
 const densityItems: { key: TableSize; label: string }[] = [
   { key: 'large', label: '宽松' },
   { key: 'default', label: '默认' },
   { key: 'small', label: '紧凑' },
 ]
-
-function resetColumns() {
-  const next: Record<string, boolean> = {}
-  for (const c of settableColumns.value) next[c.prop!] = true
-  emit('update:columnState', next)
-}
 </script>
 
 <template>
@@ -128,19 +108,26 @@ function resetColumns() {
         </button>
       </ElTooltip>
 
+      <!--
+        这里必须多套一层 span：ElDropdown 会把默认插槽交给 ElOnlyChild 克隆，
+        直接把 ElTooltip 当子节点时，ElOnlyChild 加的 role="button" 会穿透到
+        ElTooltip 的 role prop 上，控制台刷一堆 prop 校验警告。
+      -->
       <ElDropdown
         v-if="opts.density"
         trigger="click"
         popper-class="el-pro-density-popper"
         @command="(v: TableSize) => emit('update:size', v)"
       >
-        <ElTooltip content="密度" placement="top" :show-after="300">
-          <button type="button" class="el-pro-toolbar__icon">
-            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4">
-              <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke-linecap="round" />
-            </svg>
-          </button>
-        </ElTooltip>
+        <span class="el-pro-toolbar__trigger">
+          <ElTooltip content="密度" placement="top" :show-after="300">
+            <button type="button" class="el-pro-toolbar__icon">
+              <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke-linecap="round" />
+              </svg>
+            </button>
+          </ElTooltip>
+        </span>
         <template #dropdown>
           <ElDropdownMenu>
             <ElDropdownItem
@@ -156,44 +143,51 @@ function resetColumns() {
       </ElDropdown>
 
       <ElPopover
-        v-if="opts.setting && settableColumns.length"
+        v-if="opts.setting && hasSettableColumns"
         v-model:visible="settingOpen"
         trigger="click"
         placement="bottom-end"
-        :width="200"
+        :width="220"
         popper-class="el-pro-setting-popper"
       >
         <template #reference>
-          <ElTooltip content="列设置" placement="top" :show-after="300">
-            <button type="button" class="el-pro-toolbar__icon">
-              <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4">
-                <circle cx="8" cy="8" r="2.1" />
-                <path
-                  d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1"
+          <!-- 同上：ElPopover 的 reference 也会被 ElOnlyChild 克隆，别让属性落到组件上 -->
+          <span class="el-pro-toolbar__trigger">
+            <ElTooltip content="列设置" placement="top" :show-after="300">
+              <button type="button" class="el-pro-toolbar__icon">
+                <!--
+                  齿轮 = 设置。别改成「圆心 + 放射线」，那读起来是太阳/亮度，
+                  和旁边的密度、刷新、全屏放一起会被误认成主题切换。
+                -->
+                <svg
+                  viewBox="0 0 24 24"
+                  width="15"
+                  height="15"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
                   stroke-linecap="round"
-                />
-              </svg>
-            </button>
-          </ElTooltip>
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                  />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </ElTooltip>
+          </span>
         </template>
 
-        <div class="el-pro-setting">
-          <div class="el-pro-setting__head">
-            <ElCheckbox v-model="allChecked" size="small">列展示</ElCheckbox>
-            <ElButton link type="primary" size="small" @click="resetColumns">重置</ElButton>
-          </div>
-          <ElCheckboxGroup v-model="visibleProps" class="el-pro-setting__list">
-            <ElCheckbox
-              v-for="col in settableColumns"
-              :key="col.prop"
-              :value="col.prop!"
-              size="small"
-              class="el-pro-setting__row"
-            >
-              {{ col.label ?? col.prop }}
-            </ElCheckbox>
-          </ElCheckboxGroup>
-        </div>
+        <ColumnSetting
+          :columns="columns"
+          :column-state="columnState"
+          :column-fixed="columnFixed"
+          @update:column-state="emit('update:columnState', $event)"
+          @update:column-order="emit('update:columnOrder', $event)"
+          @update:column-fixed="emit('update:columnFixed', $event)"
+          @pin="(prop, target) => emit('pin', prop, target)"
+        />
       </ElPopover>
 
       <ElTooltip
@@ -251,6 +245,11 @@ function resetColumns() {
   gap: 4px;
   flex: none;
 }
+/* ElDropdown / ElPopover 的触发器外壳，只负责承接克隆下来的属性 */
+.el-pro-toolbar__trigger {
+  display: inline-flex;
+  align-items: center;
+}
 .el-pro-toolbar__icon {
   display: inline-flex;
   align-items: center;
@@ -277,29 +276,7 @@ function resetColumns() {
     transform: rotate(360deg);
   }
 }
-.el-pro-setting {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.el-pro-setting__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-.el-pro-setting__list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-.el-pro-setting__row {
-  margin-right: 0 !important;
-  height: 26px;
-}
+/* 弹层挂在 body 上，样式必须全局，不能用 scoped */
 .el-pro-setting-popper .el-dropdown-menu__item.is-active,
 .el-pro-density-popper .el-dropdown-menu__item.is-active {
   color: var(--el-color-primary);

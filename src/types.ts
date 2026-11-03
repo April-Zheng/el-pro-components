@@ -6,7 +6,18 @@
  * rules ...）一律原样透传，不做重命名；只在 Element Plus 没有对应概念时才新增扩展字段，
  * 且扩展字段统一加 `pro` 无关的前缀（valueType / valueEnum / search ...）。
  */
-import type { Component } from 'vue'
+import type { Component, VNode } from 'vue'
+
+/* -------------------------------------------------------------------------- */
+/* 响应式（卡片 / 列表的 colSpan、gutter、grid 共用）                            */
+/* -------------------------------------------------------------------------- */
+
+/** 断点。阈值与 antd Grid 一致（xs 0 / sm 576 / md 768 / lg 992 / xl 1200 / xxl 1600） */
+export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
+
+/** 可以直给，也可以按断点给 */
+export type ResponsiveValue<T> = T | Partial<Record<Breakpoint, T>>
+
 
 /* -------------------------------------------------------------------------- */
 /* valueType                                                                  */
@@ -111,6 +122,68 @@ export interface ProLayoutMenuItem {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 卡片                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 折叠方式：
+ * - `'icon'`   ：标题前出现箭头，点箭头折叠
+ * - `'header'` ：点整条 header 折叠
+ * - `true`     ：等价于 `'icon'`
+ */
+export type ProCardCollapsible = boolean | 'icon' | 'header'
+
+/** 卡片头部的标签页。内容优先取 `content`，其次取 `#tab-<key>` 插槽 */
+export interface ProCardTabItem {
+  key: string
+  label?: string
+  disabled?: boolean
+  content?: VNode | string | number
+}
+
+/** CheckCardGroup 的 options 项：一张卡片的全部数据 */
+export interface ProCheckCardOption {
+  value: string | number
+  title?: string | number
+  subTitle?: string | number
+  description?: string | number
+  avatar?: string | VNode
+  cover?: string | VNode
+  extra?: string | VNode
+  disabled?: boolean
+}
+
+/* -------------------------------------------------------------------------- */
+/* 列表                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 列在列表项里的位置。ProList 和 ProTable 共用一份 ProColumn，
+ * 靠这个字段决定「这一列在列表里渲染成什么角色」。
+ */
+export type ProListSlot =
+  | 'title'
+  | 'subTitle'
+  | 'description'
+  | 'avatar'
+  | 'extra'
+  | 'content'
+  | 'actions'
+  | 'aside'
+
+/** 列表的分栏配置。`column` 为每行几个，其余键按断点覆盖 */
+export interface ProListGrid {
+  column?: number
+  gutter?: number | [number, number]
+  xs?: number
+  sm?: number
+  md?: number
+  lg?: number
+  xl?: number
+  xxl?: number
+}
+
+/* -------------------------------------------------------------------------- */
 /* 请求                                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -157,6 +230,50 @@ export type ProRequest<T = any, P extends Record<string, any> = Record<string, a
 /* -------------------------------------------------------------------------- */
 /* 列定义                                                                      */
 /* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/* 行内编辑                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 可编辑表格的配置。挂在 ElProTable 的 `editable` 上，
+ * 或直接用 ElProEditableTable（它只是把 editable 预置好的薄壳）。
+ */
+export interface ProEditableConfig {
+  /**
+   * single：一次只编辑一行，点另一行的「编辑」会先把当前行保存掉（保存失败则不切换）
+   * multiple：允许多行同时编辑
+   * @default 'single'
+   */
+  type?: 'single' | 'multiple'
+  /** 「新增一行」时生成的行数据。不传则用各列的 defaultValue 拼一个空对象 */
+  newRecord?: (rowIndex: number) => Record<string, any>
+  /** 是否显示「新增一行」按钮 @default true */
+  addable?: boolean
+  /** 是否显示「删除」按钮 @default true */
+  deletable?: boolean
+  /**
+   * 保存。在这里发请求。
+   * 返回 `false` 或抛错都会让该行**留在编辑态**，数据也不会被写回。
+   *
+   * 也可以返回保存后的记录（通常是接口回包）：返回对象会被合并进该行。
+   * 新增行靠这个拿到后端主键 —— 不返回的话该行会一直带着临时 key，
+   * 之后再编辑/删除就只能拿 `__new_1` 去调接口了。
+   */
+  onSave?: (
+    key: string | number,
+    row: any,
+    rowIndex: number,
+  ) => boolean | void | Record<string, any> | Promise<boolean | void | Record<string, any>>
+  /** 删除。返回 false 则不移除 */
+  onDelete?: (
+    key: string | number,
+    row: any,
+    rowIndex: number,
+  ) => boolean | void | Promise<boolean | void>
+  /** 取消编辑 */
+  onCancel?: (key: string | number, row: any) => void
+}
 
 export interface ProSearchConfig {
   /** 搜索栏内的排位，越小越靠前。不传则按 columns 顺序 */
@@ -240,6 +357,8 @@ export interface ProColumn<T = any> {
 
   /** 在 el-descriptions 里占几列 */
   descriptionsSpan?: number
+  /** 在 ElProList 的列表项里扮演什么角色。不传则按 valueType / 位置自动推断 */
+  listSlot?: ProListSlot
   /** 在 el-pro-form 里占几格（24 栅格），不传则用表单的默认 span */
   formSpan?: number
   /** 表单/搜索栏里禁用 */
@@ -250,4 +369,12 @@ export interface ProColumn<T = any> {
   rules?: any[]
   /** 表单项透传给 el-form-item 的 props */
   formItemProps?: Record<string, any>
+
+  /**
+   * 可编辑表格里这一列能否编辑。
+   * - 不写：按 valueType 推断，纯展示型（index / option / progress / image / avatar / color / code）不可编辑
+   * - true / false：强制
+   * - 函数：按行决定（如「只有待审核的订单能改金额」）
+   */
+  editable?: boolean | ((row: T, index: number) => boolean)
 }
