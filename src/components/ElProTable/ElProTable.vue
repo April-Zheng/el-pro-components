@@ -426,7 +426,20 @@ async function addRow() {
   data.value = [row, ...data.value]
   total.value += 1
   emit('change', data.value)
-  await startEdit(row)
+
+  /**
+   * 新增行始终进入编辑态，且**追加**而不是替换编辑键。
+   *
+   * 不能走 startEdit：单行模式里它有「先保存上一行」的闸门，而新增行的草稿
+   * 往往是空的，校验必失败 → 第二次点「新增一行」会被上一行的报错拦住。
+   * 源码的 addEditRecord 也是这个语义：setEditableRowKeys([...editableKeys, key])，
+   * 不保存、不拦截（源码在 single 模式会拦截并提示「只能同时编辑一行」，
+   * 这里按产品要求放开 —— 每次点击都能加出一行编辑态）。
+   */
+  const key = keyOf(row)
+  if (editingKeys.value.includes(key)) return
+  drafts[String(key)] = { ...row }
+  setEditingKeys([...editingKeys.value, key])
 }
 
 const showAddRow = computed(() => !!editableConfig.value && editableConfig.value.addable !== false)

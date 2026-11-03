@@ -78,8 +78,36 @@ const flatColumns = computed<ProColumn[]>(() => {
 const searchColumns = computed(() => flatColumns.value.map(resolveSearchColumn))
 
 const popoverColumns = computed(() =>
-  props.collapse ? searchColumns.value : searchColumns.value.filter((c) => c.secondary),
+  (props.collapse ? searchColumns.value : searchColumns.value.filter((c) => c.secondary)).map(
+    withLocalPopper,
+  ),
 )
+
+/**
+ * 弹层里的下拉/日期类控件必须 `teleported: false`。
+ *
+ * 这类控件的浮层默认挂在 body 上，而 popover 的 ClickOutside 只认自己 DOM 子树 ——
+ * 用户点下拉选项那一刻，popover 认为「点在弹层外面」，还没等点「确认」就把弹层关了。
+ * 让浮层留在 popover 内部渲染，ClickOutside 就不会再误判。
+ * 用户显式传了 teleported 的话以用户为准。
+ */
+const POPPER_VALUE_TYPES = new Set([
+  'select',
+  'tag',
+  'status',
+  'cascader',
+  'treeSelect',
+  'time',
+  'timeRange',
+])
+
+function withLocalPopper(col: ProColumn): ProColumn {
+  const t = (col.valueType ?? (col.valueEnum ? 'select' : 'text')) as string
+  const isPopper =
+    POPPER_VALUE_TYPES.has(t) || t.startsWith('date') || t === 'dateMonthRange' || t === 'dateQuarterRange'
+  if (!isPopper) return col
+  return { ...col, fieldProps: { teleported: false, ...col.fieldProps } }
+}
 
 const outsideColumns = computed(() =>
   props.collapse ? [] : searchColumns.value.filter((c) => !c.secondary),
@@ -265,6 +293,15 @@ defineExpose({
   color: var(--el-text-color-regular);
   white-space: nowrap;
   flex-shrink: 0;
+}
+/*
+ * 行内下拉类控件不能只靠 width:100% 撑：它挂在 flex（min-width:0）容器里，
+ * 宽度循环依赖会塌缩到几十像素（实测 44px）。给一个和 antd Select 默认
+ * 宽度观感一致的 min-width 兜底。
+ */
+.el-pro-light-filter__field .el-select,
+.el-pro-light-filter__field .el-cascader {
+  min-width: 140px;
 }
 .el-pro-light-filter__trigger {
   display: inline-flex;

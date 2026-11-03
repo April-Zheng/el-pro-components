@@ -921,6 +921,13 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - **`ElProForm` 暴露的方法是 `reset`，不是 `resetFields`。** 外层容器（比如 StepsForm）想重置各步表单，
   调 `reset()`；写成 `f?.resetFields?.()` 会被可选链静默吞掉——运行时不报错，重置就是不生效，
   症状是「提交成功了表单却没清空」。可选链调用前先确认方法名真的存在。
+- **`ElProLightFilter` 弹层里的下拉/日期控件强制 `teleported: false`。** 这些控件的浮层若挂到 `body`，
+  用户点浮层选项那一刻会被 popover 的 ClickOutside 误判成「点在弹层外面」——没点「确认」弹层就关了。
+  浮层改为留在 popover 内部渲染后无此问题；副作用是 date-picker 的隐藏面板 DOM（0×0 不可见）也驻留在弹层里，
+  想遍历弹层按钮时要限定 `.el-pro-light-filter__footer` 范围。用户在 `fieldProps` 里显式传 `teleported` 可覆盖。
+- **可编辑表格的「新增一行」不做单行模式拦截。** 每次点击都追加一行并进入编辑态（对齐源码 `addEditRecord`
+  直接往 `editableKeys` 里追加的语义）。源码在 single 模式会拦并提示「只能同时编辑一行」，这里按产品要求放开；
+  点行上「编辑」按钮切换行时仍然是单行语义（先保存当前行）。
 
 ## 踩过的坑（改这块之前先看）
 
@@ -949,6 +956,10 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
   `.el-pro-field--full`（`width: 100%`），在 `div` 里就是一列三个 block：最小值 / `~` / 最大值各占一行，
   表单项从 32px 被撑到 99px，旁边一起排的项全被挤到下一行。必须显式 `display: flex` +
   子项 `flex: 1 1 0 / width: auto / min-width: 0`。
+- **flex 容器里的 `el-select` 会塌缩到几十像素。** `width: 100%` 挂在一个宽度由内容决定的 flex 项
+  （还带 `min-width: 0`）里是循环依赖，实测塌到 44px——「下拉框被挤成一点点」就是这么来的；
+  旁边的 `el-input` 因为自身有 min-content 反而没事，特别有迷惑性。修法是给这些控件
+  `min-width` 兜底（见 `ElProLightFilter` 的样式块），遇到「控件莫名变窄」先查 flex 宽度循环。
 
 ## Roadmap
 
