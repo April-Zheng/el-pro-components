@@ -106,9 +106,10 @@ type ProRequest<T> = (
 | `ElProDescriptions` | 同一份 columns 生成详情页 |
 | `ElProLayout` | 侧边菜单 + 面包屑外壳 |
 | `ElProCard` | 结构化头部 + 折叠 + 嵌套分组 + 标签页 |
+| `ElProStatistic` / `ElProStatisticCard` / `ElProStatisticCardGroup` | 指标卡：数值 + 趋势 + 图表位，几张拼一条 |
 | `ElProCheckCard` / `ElProCheckCardGroup` | 整块可点的卡片，做单选/多选 |
 | `ElProList` | 同一份 columns 生成列表页 / 卡片流 |
-| `ElProSkeleton` | 列表 / 表格 / 详情三种版式的骨架屏 |
+| `ElProSkeleton` | 列表 / 表格 / 详情 / 结果页四种版式的骨架屏 |
 
 ### ElProTable
 
@@ -201,6 +202,30 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 
 和表格共用同一份 columns。表格里显示成 tag 的字段，详情页自动是同一个 tag——不用维护两套字典。`descriptionsSpan` 控制跨列。
 
+详情页通常「一个页面一个接口」，让父级为它维护 `loading` / `error` / `data` 三份状态其实很啰嗦，所以也可以把请求交给组件：
+
+```vue
+<ElProDescriptions
+  ref="descRef"
+  :columns="columns"
+  :request="(params, { signal }) => api.detail(params.id, { signal })"
+  :params="params"
+  :column="{ xs: 1, md: 2, lg: 3 }"
+/>
+```
+
+| 属性 | 说明 |
+| --- | --- |
+| `request(params, { signal })` | 返回 `{ data, success?, errorMessage? }`。**必须包一层 `data`**：记录本身是任意对象，允许裸对象的话，记录里恰好有 `data` 字段时就分不清了 |
+| `params` | 透传给 request 的参数，引用变化会重新请求。**必须是稳定引用**，模板里写 `:params="{ id }"` 每次渲染都是新对象，会无限重查 |
+| `immediate` | 默认 `true`；传 `false` 则挂载后不自动请求，等 `reload()` |
+| `loading` | 受控加载态，与内部请求态取或 |
+| `column` | 支持响应式：`{ xs: 1, md: 2, lg: 3 }`。窄屏不配这个，三列会把标签挤成一列竖排 |
+
+`request` 模式下：首次加载显示 `descriptions` 版式的骨架屏；`success: false` 时顶部出错误提示但**不清空已展示的记录**（留着旧数据比白屏有用）；切 `params` 会 abort 上一次请求，并用自增 id 丢弃过期回包。
+
+实例方法：`reload()` / `refresh()`，以及 `data`。
+
 ### ElProLayout
 
 ```vue
@@ -245,6 +270,53 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 
 3. **一套开关**：`ghost`（只当布局容器）、`hoverable`、`boxShadow`、`bordered`、`type="inner"`、`size="small"`、`loading`、`cover`、`actions`。
 
+### ElProStatistic / ElProStatisticCard
+
+后台首页几乎必有的那块：一个数值 + 标题 + 趋势 + 可选图表。数值和卡片分成两层，所以字号、千分位、趋势配色只有一处实现。
+
+```vue
+<ElProStatisticCardGroup :gutter="0">
+  <ElProStatisticCard
+    v-for="item in overview"
+    :key="item.title"
+    :col-span="6"
+    :statistic="item"
+  />
+</ElProStatisticCardGroup>
+```
+
+`Group` 只做两件事：记住排列方向、把子卡拼成一条画分割线。子卡宽度仍由 `col-span` 决定（24 栅格），所以「四等分」就是 `:col-span="6"`，和 `ElProCard` 的嵌套规则完全一致。
+
+`statistic` 的字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `value` / `title` / `tip` / `description` | 数值、标题、标题旁问号、数值下方说明 |
+| `precision` | 小数位数。不传则保留原值位数，不做取舍 |
+| `prefix` / `suffix` | `¥` / `人` / `%`，字号比数值小一号 |
+| `trend` | `up` / `down`。**红涨绿跌**，与源码注释的「中国金融语义」一致；想反过来覆盖 `--el-pro-statistic-trend-up-color` / `-down-color` |
+| `status` | 数值前的小圆点：`success` / `processing` / `warning` / `error` / `default` |
+| `layout` | `vertical`（默认，标题上数值下）/ `horizontal`（同行，同 14px）/ `inline`（挤一行，13px 次级色） |
+| `icon` / `formatter` / `loading` / `groupSeparator` | 左侧图标、完全自定义格式化、占位条、千分位符 |
+
+卡片上还能放图表，`chart-placement` 决定它和数值的相对位置：
+
+```vue
+<ElProStatisticCard
+  :col-span="12"
+  chart-placement="right"
+  :statistic="{ title: '磁盘占用', value: 68, suffix: '%' }"
+>
+  <template #chart>
+    <ElProgress type="dashboard" :percentage="68" :width="96" />
+  </template>
+</ElProStatisticCard>
+```
+
+卡片侧的属性（`title` / `tooltip` / `extra` / `bordered` / `loading` / `col-span` / `gutter`）经 `$attrs` 原样透传给 `ElProCard`，两边不重复声明——否则迟早不同步。
+
+![指标卡](docs/screenshots/statistic-card.png)
+
 ### ElProCheckCard
 
 ```vue
@@ -279,7 +351,9 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 
 ### ElProSkeleton
 
-`type` 取 `list` / `table` / `descriptions` / `grid` / `card`。`ElProCard` 的 `loading` 内部用的就是它。
+`type` 取 `list` / `table` / `descriptions` / `grid` / `card` / `result`。`ElProCard` 的 `loading` 内部用的就是它。
+
+`result` 是给结果页（提交成功 / 404 / 无权限）用的：居中圆形图标位 + 标题条 + 说明条 + 两个按钮位。
 
 ## valueType 对照表
 
@@ -291,8 +365,10 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 | `textarea` / `code` | 纯文本 | ElInput textarea（code 用等宽字体） |
 | `password` | 纯文本 | ElInput password |
 | `number` | 数字 | ElInputNumber |
+| `digitRange` | `10 ~ 50` | 两个 ElInputNumber |
 | `money` | ¥1,288.50 | ElInputNumber |
 | `percent` | 65.0% | ElInputNumber |
+| `second` | 2小时1分钟5秒 | ElInputNumber（单位是秒） |
 | `rate` | 星星 | ElRate |
 | `slider` | 数字 | ElSlider |
 | `select` / `tag` | 枚举文本 / ElTag | ElSelect |
@@ -361,14 +437,12 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 
 ## 已知限制
 
-诚实列出来，这些不是「以后再说」，是当前客观上做不到或没做的：
+诚实列出来。这里只放**客观上做不到**的；「还没做」的都在 Roadmap 里，别混在一起——混了会让读者误判优先级。
 
 - **`dateQuarter` / `dateQuarterRange` 表单里降级为月选择器。** Element Plus 没有季度选择器。展示没问题（能正确算出 `2026-Q4`），但选不了季度。需要的话传 `fieldComponent` 自定义。
-- **行拖拽排序（拖动行改 sort 字段）未做。** 那是业务态，交给 `sortablejs`；列顺序的拖拽是有的。
-- **表单只有一种版式。** `StepsForm` / `ModalForm` / `DrawerForm` / `QueryFilter` / `LoginForm` 还没做，目前用 `ElProForm` + `el-dialog` 自己拼。
 - **`ElProCard` 的 `split` 与 `wrap` 混用不保证好看。** 一行塞多个不同 `colSpan` 又换行时，分割线按 DOM 顺序画，可能出现「行首也带线」。
-- **`ElProList` 没有搜索栏。** 要筛选就用 `ElProTable`，或者自己在 `#header` 里放一个 `ElProForm`。
-- **列设置不支持分组列（嵌套表头）。** pro-components 那套多级表头 + 分组拖拽没搬过来，单层表头够用且不会出现「拖到父节点」的歧义。
+- **表格没有多级表头。** `columns` 是扁平数组，`el-table-column` 的嵌套写法没有对应入口；顺带也就没法声明 `type="expand"` 的展开行。已经排在 Roadmap 第一位。
+- **列设置不支持分组列。** 上一条的衍生：没有嵌套结构，就没有「分组拖拽」可做。
 
 ## 踩过的坑（改这块之前先看）
 
@@ -382,9 +456,14 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] 列设置里固定列首 / 列尾
 - [x] `ElProEditableTable`（行内编辑）
 - [x] `ElProCard` / `ElProCheckCard` / `ElProList` / `ElProSkeleton`
-- [ ] 列设置分组（嵌套表头 + 分组拖拽）
+- [x] `ElProStatistic` / `ElProStatisticCard`（含 `Group`）
+- [x] `ElProDescriptions` 支持 `request` 与响应式 `column`
+- [x] `Skeleton` 的 `result` 版式，`second` / `digitRange` 两个 valueType
+- [ ] **表格多级表头 + 默认插槽**（列设置分组、展开行都卡在这）
 - [ ] 表单布局变体：`StepsForm` / `ModalForm` / `DrawerForm`
-- [ ] 表单分组 `group` 与列表型字段 `formList`
+- [ ] 表单分组 `group` 与列表型字段 `formList` / 字段联动 `dependency`
+- [ ] `QueryFilter`（表格页顶部独立的筛选区）
+- [ ] 列设置分组（嵌套表头 + 分组拖拽）
 - [ ] 导出当前列定义对应的 CSV
 - [ ] 行拖拽排序（`sortablejs` 可选依赖）
 

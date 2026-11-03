@@ -86,4 +86,10 @@ const pickedFeatures = ref<any[]>(['alert'])
     <p class="demo-section-desc">表格版骨架屏，用于「先占位、后填数据」的列表页。</p>
     <ElProSkeleton type="table" :rows="3" :columns="5" />
   </div>
+
+  <div class="demo-card" style="margin-top: 16px">
+    <h3 class="demo-section-title">Skeleton result 版式</h3>
+    <p class="demo-section-desc">结果页（提交成功 / 404 / 无权限）在拿到数据前的占位。</p>
+    <ElProSkeleton type="result" />
+  </div>
 </template>

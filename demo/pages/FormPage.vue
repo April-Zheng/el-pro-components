@@ -27,6 +27,8 @@ const formColumns: ProColumn[] = [
     valueEnum: { front: '前端', back: '后端', ops: '运维' },
   },
   { prop: 'budget', label: '预算', valueType: 'money', fieldProps: { min: 0, step: 1000 } },
+  { prop: 'seatRange', label: '人数区间', valueType: 'digitRange' },
+  { prop: 'sla', label: '响应时限', valueType: 'second', fieldProps: { step: 60 } },
   {
     prop: 'ratio',
     label: '完成比例',
@@ -55,6 +57,8 @@ const formModel = reactive<Record<string, any>>({
   level: 'mid',
   tags: ['front'],
   budget: 20000,
+  seatRange: [10, 50],
+  sla: 7200,
   ratio: 65,
   startDate: '2026-11-02',
   period: ['2026-11-01', '2026-11-30'],

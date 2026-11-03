@@ -6,7 +6,7 @@
  * rules ...）一律原样透传，不做重命名；只在 Element Plus 没有对应概念时才新增扩展字段，
  * 且扩展字段统一加 `pro` 无关的前缀（valueType / valueEnum / search ...）。
  */
-import type { Component, VNode } from 'vue'
+import type { Component, CSSProperties, VNode } from 'vue'
 
 /* -------------------------------------------------------------------------- */
 /* 响应式（卡片 / 列表的 colSpan、gutter、grid 共用）                            */
@@ -39,8 +39,12 @@ export type ValueType =
   | 'code'
   /* 数值 */
   | 'number'
+  /** 数字区间，值是 `[最小值, 最大值]` */
+  | 'digitRange'
   | 'money'
   | 'percent'
+  /** 时长：值是秒数，展示成「1 小时 2 分钟 3 秒」 */
+  | 'second'
   | 'rate'
   | 'slider'
   /* 选择 */
@@ -154,6 +158,57 @@ export interface ProCheckCardOption {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 统计数值                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** 数值前的状态圆点，映射到 Element Plus 的语义色 */
+export type ProStatisticStatus = 'success' | 'processing' | 'default' | 'error' | 'warning'
+
+/**
+ * 趋势箭头。
+ * **up 用红、down 用绿** —— 中国金融语义，与 pro-components 源码的取向一致
+ * （源码注释写的也是「红涨绿跌」）。海外业务想要相反配色，覆盖
+ * `--el-pro-statistic-trend-up-color` / `-down-color` 两个变量即可。
+ */
+export type ProStatisticTrend = 'up' | 'down'
+
+/**
+ * - `vertical`：标题在上、数值在下（默认，适合指标卡）
+ * - `horizontal`：标题在左、数值在右，字号统一（适合列表里的一行）
+ * - `inline`：标题和数值挤在一行，字号 13px、次级色（适合密集排布）
+ */
+export type ProStatisticLayout = 'horizontal' | 'vertical' | 'inline'
+
+/** 统计数值的配置。挂 `ElProStatistic` 用，也可以整个塞进 `StatisticCard` 的 `statistic` */
+export interface ProStatisticProps {
+  value?: number | string
+  title?: string | number
+  /** 标题后的问号提示 */
+  tip?: string
+  /** 数值下方的描述文字 */
+  description?: string | number
+  /** 小数位数。不传则保留原值的位数，不做任何取舍 */
+  precision?: number
+  /** 完全自定义格式化。给了它就忽略 precision 与分组 */
+  formatter?: (value: number | string) => string
+  prefix?: string | number
+  suffix?: string | number
+  /** 左侧图标：可以直接传组件（如 @element-plus/icons-vue 的某个图标） */
+  icon?: Component | string
+  status?: ProStatisticStatus
+  trend?: ProStatisticTrend
+  layout?: ProStatisticLayout
+  /** 千分位分隔符 @default ',' */
+  groupSeparator?: string
+  /** 小数点符号 @default '.' */
+  decimalSeparator?: string
+  /** 加载态：数值区换成一根占位条 */
+  loading?: boolean
+  /** 只作用于数值本身的样式（颜色、字号） */
+  valueStyle?: CSSProperties
+}
+
+/* -------------------------------------------------------------------------- */
 /* 列表                                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -228,8 +283,26 @@ export type ProRequest<T = any, P extends Record<string, any> = Record<string, a
 ) => Promise<ProRequestResult<T> | T[]> | ProRequestResult<T> | T[]
 
 /* -------------------------------------------------------------------------- */
-/* 列定义                                                                      */
+/* 描述列表                                                                    */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * 描述列表的请求结果。**必须包一层 `data`**：记录本身就是任意对象，
+ * 若允许「裸对象直接当数据」，那记录里恰好有 `data` / `success` 字段时就无法区分。
+ * 用类型卡住这个歧义，比运行时猜要可靠。
+ */
+export interface ProDescriptionsRequestResult<T = Record<string, any>> {
+  data: T
+  /** 返回 false 时不清空已有数据，只展示 errorMessage */
+  success?: boolean
+  errorMessage?: string
+}
+
+/** 描述列表的数据请求。第二个参数带 `signal`，切记录时可取消上一次请求 */
+export type ProDescriptionsRequest<T = Record<string, any>> = (
+  params: Record<string, any>,
+  extra: { signal: AbortSignal },
+) => Promise<ProDescriptionsRequestResult<T>> | ProDescriptionsRequestResult<T>
 
 /* -------------------------------------------------------------------------- */
 /* 行内编辑                                                                    */
@@ -298,6 +371,10 @@ export interface ProSearchConfig {
    */
   transform?: (value: any) => Record<string, any> | void
 }
+
+/* -------------------------------------------------------------------------- */
+/* 列定义                                                                      */
+/* -------------------------------------------------------------------------- */
 
 /**
  * 列定义 = Element Plus 的 TableColumnCtx 常用字段 + Pro 扩展。

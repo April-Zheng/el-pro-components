@@ -9,6 +9,9 @@ import ElProCheckCard from './components/ElProCard/ElProCheckCard.vue'
 import ElProCheckCardGroup from './components/ElProCard/ElProCheckCardGroup.vue'
 import ElProList from './components/ElProList/ElProList.vue'
 import ElProSkeleton from './components/ElProSkeleton/ElProSkeleton.vue'
+import ElProStatistic from './components/ElProCard/ElProStatistic.vue'
+import ElProStatisticCard from './components/ElProCard/ElProStatisticCard.vue'
+import ElProStatisticCardGroup from './components/ElProCard/ElProStatisticCardGroup.vue'
 import CellRenderer from './fields/CellRenderer.vue'
 import FormField from './fields/FormField.vue'
 
@@ -23,6 +26,9 @@ export {
   ElProCheckCardGroup,
   ElProList,
   ElProSkeleton,
+  ElProStatistic,
+  ElProStatisticCard,
+  ElProStatisticCardGroup,
   CellRenderer,
   FormField,
 }
@@ -68,6 +74,9 @@ const components = [
   ElProCheckCardGroup,
   ElProList,
   ElProSkeleton,
+  ElProStatistic,
+  ElProStatisticCard,
+  ElProStatisticCardGroup,
 ]
 
 /**

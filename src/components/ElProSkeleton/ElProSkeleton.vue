@@ -15,7 +15,7 @@ defineOptions({ name: 'ElProSkeleton' })
 const props = withDefaults(
   defineProps<{
     /** 版式 */
-    type?: 'list' | 'table' | 'descriptions' | 'grid' | 'card'
+    type?: 'list' | 'table' | 'descriptions' | 'grid' | 'card' | 'result'
     /** 行数 */
     rows?: number
     /** 列数（table 的表头列数、descriptions 的每组字段数、grid 的块数） */
@@ -88,6 +88,17 @@ const barWidth = (i: number) => `${Math.round(WIDTHS[i % WIDTHS.length] * 100)}%
       <div v-for="i in colList" :key="i" class="el-pro-skeleton__block" />
     </div>
 
+    <!-- 结果页：居中的图标 + 标题 + 说明 + 按钮 -->
+    <div v-else-if="type === 'result'" class="el-pro-skeleton__result">
+      <div class="el-pro-skeleton__result-icon" />
+      <div class="el-pro-skeleton__bar is-result-title" />
+      <div class="el-pro-skeleton__bar is-thin is-result-sub" />
+      <div class="el-pro-skeleton__result-actions">
+        <div class="el-pro-skeleton__result-btn" />
+        <div class="el-pro-skeleton__result-btn" />
+      </div>
+    </div>
+
     <div v-else class="el-pro-skeleton__card">
       <div class="el-pro-skeleton__bar is-heading" />
       <div v-for="i in rowList" :key="i" class="el-pro-skeleton__bar" :style="{ width: barWidth(i) }" />
@@ -103,7 +114,9 @@ const barWidth = (i: number) => `${Math.round(WIDTHS[i % WIDTHS.length] * 100)}%
 }
 .el-pro-skeleton__bar,
 .el-pro-skeleton__avatar,
-.el-pro-skeleton__block {
+.el-pro-skeleton__block,
+.el-pro-skeleton__result-icon,
+.el-pro-skeleton__result-btn {
   background: var(--el-pro-skeleton-base);
   border-radius: 4px;
   position: relative;
@@ -129,7 +142,9 @@ const barWidth = (i: number) => `${Math.round(WIDTHS[i % WIDTHS.length] * 100)}%
 /* 扫光：只动 ::after 的 transform，不触发重排 */
 .el-pro-skeleton.is-active .el-pro-skeleton__bar::after,
 .el-pro-skeleton.is-active .el-pro-skeleton__avatar::after,
-.el-pro-skeleton.is-active .el-pro-skeleton__block::after {
+.el-pro-skeleton.is-active .el-pro-skeleton__block::after,
+.el-pro-skeleton.is-active .el-pro-skeleton__result-icon::after,
+.el-pro-skeleton.is-active .el-pro-skeleton__result-btn::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -206,5 +221,38 @@ const barWidth = (i: number) => `${Math.round(WIDTHS[i % WIDTHS.length] * 100)}%
 
 .el-pro-skeleton__card .el-pro-skeleton__bar {
   max-width: 100%;
+}
+
+/* ---- 结果页 ---- */
+.el-pro-skeleton__result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 16px;
+}
+.el-pro-skeleton__result-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-bottom: 20px;
+}
+.el-pro-skeleton__bar.is-result-title {
+  width: 32%;
+  height: 18px;
+  margin-bottom: 14px;
+}
+.el-pro-skeleton__bar.is-result-sub {
+  width: 46%;
+  height: 10px;
+  margin-bottom: 24px;
+}
+.el-pro-skeleton__result-actions {
+  display: flex;
+  gap: 12px;
+}
+.el-pro-skeleton__result-btn {
+  width: 88px;
+  height: 32px;
+  border-radius: 4px;
 }
 </style>

@@ -101,6 +101,32 @@ export function formatNumber(value: any, valueFormat?: string, fallbackDecimals 
 }
 
 /**
+ * 秒数格式化成人话：`3725` → `1小时2分钟5秒`。
+ *
+ * 与源码 `formatSecond` 保持一致：负数表示「还有多久」，后缀「前」。
+ * 不显示为 0 的单位直接省略，所以 59 秒不会写成「0分钟59秒」。
+ */
+export function formatSecond(value: any): string {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return value === null || value === undefined ? '' : String(value)
+
+  const past = num < 0
+  let rest = Math.abs(num)
+  const d = Math.floor(rest / 86400)
+  rest -= d * 86400
+  const h = Math.floor(rest / 3600)
+  rest -= h * 3600
+  const m = Math.floor(rest / 60)
+  const s = Math.floor(rest - m * 60)
+
+  let text = `${s}秒`
+  if (m > 0) text = `${m}分钟${text}`
+  if (h > 0) text = `${h}小时${text}`
+  if (d > 0) text = `${d}天${text}`
+  return past ? `${text}前` : text
+}
+
+/**
  * valueEnum 解析后的结果。
  *
  * 这里显式声明结构而不是交叉 ValueEnumItem —— 后者是 `string | object` 的联合，
@@ -282,6 +308,23 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
     case 'number':
     case 'slider':
       return { kind: 'text', text: formatNumber(value, valueFormat, 0), raw: value }
+    case 'digitRange': {
+      if (!Array.isArray(value) || value.length < 2) {
+        return value === null || value === undefined || value === ''
+          ? empty()
+          : { kind: 'text', text: String(value), raw: value }
+      }
+      const fmtOne = (v: any) =>
+        v === null || v === undefined || v === '' ? '' : formatNumber(v, valueFormat, 0)
+      const from = fmtOne(value[0])
+      const to = fmtOne(value[1])
+      if (!from && !to) return empty()
+      // 只有一端有值时只显示那一端：写成「~ 5」比「0 ~ 5」更诚实
+      if (!from || !to) return { kind: 'text', text: from || to, raw: value }
+      return { kind: 'text', text: `${from} ~ ${to}`, raw: value }
+    }
+    case 'second':
+      return { kind: 'text', text: formatSecond(value), raw: value }
     case 'percent':
       return { kind: 'text', text: `${formatNumber(value, valueFormat ?? '0.0')}%`, raw: value }
     case 'rate':

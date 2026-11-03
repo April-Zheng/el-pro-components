@@ -172,6 +172,24 @@ const inputType = computed(() => {
       return 'text'
   }
 })
+
+/**
+ * 数字区间：对外是 `[min, max]`，对内是两个独立输入框。
+ *
+ * 两端都清空时直接给 `undefined` 而不是 `[null, null]` —— 后端对着
+ * `[null, null]` 做 `if (range)` 判断会得到 true，等于「筛了但没筛」。
+ */
+const rangeValue = computed<[number | undefined, number | undefined]>(() =>
+  Array.isArray(props.modelValue)
+    ? [props.modelValue[0] ?? undefined, props.modelValue[1] ?? undefined]
+    : [undefined, undefined],
+)
+
+function setRangePart(index: 0 | 1, v: number | undefined | null) {
+  const next: [number | undefined, number | undefined] = [...rangeValue.value]
+  next[index] = v === null ? undefined : v
+  emit('update:modelValue', next[0] === undefined && next[1] === undefined ? undefined : next)
+}
 </script>
 
 <template>
@@ -194,6 +212,38 @@ const inputType = computed(() => {
     class="el-pro-field--full"
     v-bind="mergedProps"
   />
+
+  <!-- 时长：值是秒数，编辑时按秒填 -->
+  <ElInputNumber
+    v-else-if="effectiveType === 'second'"
+    v-model="value"
+    :min="0"
+    :placeholder="placeholder"
+    :controls-position="mergedProps['controls-position'] ?? 'right'"
+    class="el-pro-field--full"
+    v-bind="mergedProps"
+  />
+
+  <!-- 数字区间：两个输入框拼一行 -->
+  <div v-else-if="effectiveType === 'digitRange'" class="el-pro-field--range">
+    <ElInputNumber
+      :model-value="rangeValue[0]"
+      placeholder="最小值"
+      :controls-position="mergedProps['controls-position'] ?? 'right'"
+      class="el-pro-field--full"
+      v-bind="mergedProps"
+      @update:model-value="(v: any) => setRangePart(0, v)"
+    />
+    <span class="el-pro-field__range-sep">~</span>
+    <ElInputNumber
+      :model-value="rangeValue[1]"
+      placeholder="最大值"
+      :controls-position="mergedProps['controls-position'] ?? 'right'"
+      class="el-pro-field--full"
+      v-bind="mergedProps"
+      @update:model-value="(v: any) => setRangePart(1, v)"
+    />
+  </div>
 
   <ElSlider
     v-else-if="effectiveType === 'slider'"

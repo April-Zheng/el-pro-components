@@ -13,6 +13,7 @@ import UsersPage from './pages/UsersPage.vue'
 import FormPage from './pages/FormPage.vue'
 import DetailPage from './pages/DetailPage.vue'
 import CardPage from './pages/CardPage.vue'
+import StatisticPage from './pages/StatisticPage.vue'
 import ListPage from './pages/ListPage.vue'
 import EditablePage from './pages/EditablePage.vue'
 import PlaceholderPage from './pages/PlaceholderPage.vue'
@@ -36,6 +37,7 @@ const active = ref(initialPage())
     <FormPage v-else-if="active === '/form'" />
     <DetailPage v-else-if="active === '/detail'" />
     <CardPage v-else-if="active === '/card'" />
+    <StatisticPage v-else-if="active === '/statistic'" />
     <ListPage v-else-if="active === '/list'" />
     <EditablePage v-else-if="active === '/editable'" />
     <PlaceholderPage v-else :path="active" />
