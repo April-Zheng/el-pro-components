@@ -5,9 +5,16 @@
  * 刻意不 import vue-router：这个组件只负责「长什么样」，
  * 跳转交给 el-menu 的 router 模式或使用方自己监听 @select。
  * 这样它既能用在 vue-router 项目里，也能用在自研路由里。
+ *
+ * 顶栏和侧栏都是 `position: sticky`：整页滚动（文档流）不变，但这两块不跟着走。
+ * 一开始两者都是静态定位，滚动时一起被卷上去 —— 菜单没了、顶栏没了，
+ * 页头吸顶后正好占住视口顶部，看起来就是「顶栏被页头盖住了」。
+ * 用 sticky 而不是「内容区内部滚动」的理由：内部滚动会让 el-affix 的坐标系
+ * 变成那个滚动容器，页面里所有吸顶都得跟着改 offset；文档流滚动则各处零改动。
  */
-import { computed, ref } from 'vue'
+import { computed, provide, ref } from 'vue'
 import { ElBreadcrumb, ElBreadcrumbItem, ElMenu, ElScrollbar } from 'element-plus'
+import { PRO_LAYOUT, PRO_LAYOUT_HEADER_HEIGHT } from '../../core/layoutContext'
 import type { ProLayoutMenuItem } from '../../types'
 import MenuItem from './MenuItem.vue'
 
@@ -93,12 +100,18 @@ const siderStyle = computed(() => ({
  * 把当前侧栏宽度挂成 CSS 变量。
  * 给底部固定工具条（ElProFooterToolbar 的 offsetLeft）用 —— 它钉在视口上，
  * 得知道左边被菜单占了多少，而这个值只有布局自己清楚。
+ *
+ * 同时挂一个顶栏高度变量：页头吸顶的 offset 要吃掉它，CSS 和 JS 共用一处定义。
  */
 const layoutStyle = computed(() => ({
   '--el-pro-sider-width': props.hideSider
     ? '0px'
     : `${collapsed.value ? props.collapsedWidth : props.siderWidth}px`,
+  '--el-pro-layout-header-height': `${PRO_LAYOUT_HEADER_HEIGHT}px`,
 }))
+
+/** 页面层（ElProPageContainer）靠这个知道吸顶要往下让多少 */
+provide(PRO_LAYOUT, { headerHeight: PRO_LAYOUT_HEADER_HEIGHT })
 </script>
 
 <template>
@@ -174,10 +187,20 @@ const layoutStyle = computed(() => ({
   min-height: 100vh;
   background: var(--el-bg-color-page, #f5f7fa);
 }
+/*
+ * 侧栏钉住：整页滚动时它不动。
+ * `align-self: flex-start` 是必须的 —— 默认 stretch 会让它跟容器一样高，
+ * 高度一满就没有「可滑动余量」，sticky 等于失效（这个坑很隐蔽：看上去像没生效）。
+ * 高度取 100vh，菜单超出时由内层 el-scrollbar 自己滚。
+ */
 .el-pro-layout__sider {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
   display: flex;
   flex-direction: column;
   flex: none;
+  height: 100vh;
   background: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-lighter);
   transition: width 0.2s ease;
@@ -187,7 +210,7 @@ const layoutStyle = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 56px;
+  height: var(--el-pro-layout-header-height, 56px);
   flex: none;
   padding: 0 12px;
   border-bottom: 1px solid var(--el-border-color-lighter);
@@ -203,6 +226,8 @@ const layoutStyle = computed(() => ({
 }
 .el-pro-layout__menu {
   flex: 1;
+  /* 允许收缩到容器高度以内，否则 el-scrollbar 撑高、菜单滚不动 */
+  min-height: 0;
   padding: 8px 0;
 }
 .el-pro-layout__menu .el-menu {
@@ -214,12 +239,19 @@ const layoutStyle = computed(() => ({
   flex: 1;
   min-width: 0;
 }
+/*
+ * 顶栏也钉住。z-index 只求「盖住内容」：
+ * 页面吸顶的页头在它下面（offset = 顶栏高度），两者不重叠，不需要抢层级。
+ */
 .el-pro-layout__header {
+  position: sticky;
+  top: 0;
+  z-index: 11;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  height: 56px;
+  height: var(--el-pro-layout-header-height, 56px);
   flex: none;
   padding: 0 16px;
   background: var(--el-bg-color);

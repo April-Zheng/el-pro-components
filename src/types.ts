@@ -665,6 +665,14 @@ export interface ProColumn<T = any> {
   label?: string
   width?: string | number
   minWidth?: string | number
+  /**
+   * 这一列要不要参与「撑满剩余宽度」的分配。默认 true。
+   *
+   * 默认态下 `width` 只当成**下限**（传给 el-table 的是 min-width），
+   * 容器比所有列加起来还宽时，多出来的空间按比例摊给各列 —— 和 antd
+   * `table-layout: auto` 的表现一致。要钉死宽度（比如图标列），写 `flex: false`。
+   */
+  flex?: boolean
   fixed?: boolean | 'left' | 'right'
   align?: 'left' | 'center' | 'right'
   headerAlign?: 'left' | 'center' | 'right'

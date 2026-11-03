@@ -56,6 +56,29 @@ const children = computed(() => props.column.children ?? [])
 const isGroup = computed(() => children.value.length > 0)
 
 /**
+ * 列宽怎么交给 el-table，决定了这张表能不能撑满容器。
+ *
+ * el-table 只在**存在没有 width 的列**时才把剩余空间分出去
+ * （table-layout.mjs：`if (flexColumns.length > 0 && fit)`，flexColumns 就是
+ * 「width 不是数字」的列）。schema 里每列都老老实实写了 width 时，它一步都不动 ——
+ * 表格停在 Σwidth，右边留一条空白，看起来像没撑开。
+ *
+ * antd 不是这个脾气：`table-layout: auto` 下 width 只是下限，多出来的宽度
+ * 由浏览器摊给所有列。所以这里把 width 当 **min-width** 传，让每列都成为
+ * flex 列，撑满行为就和 antd 对齐了；容器真不够宽时 el-table 会置 scrollX 并
+ * 回落到 min-width，和原来的表现一样。
+ *
+ * 要钉死某列宽度（图标列、操作列这种不希望变宽的）就写 `flex: false`，走原生的 width。
+ */
+const flexible = computed(() => props.column.flex !== false)
+const widthBinding = computed(() => (flexible.value ? undefined : props.column.width))
+const minWidthBinding = computed(() => {
+  // 显式给了 minWidth 就以它为准，别再拿 width 顶上去
+  if (props.column.minWidth !== undefined) return props.column.minWidth
+  return flexible.value ? props.column.width : undefined
+})
+
+/**
  * 列插槽（`#${列的 prop}`）的渲染器。
  *
  * 为什么不能直接写 `<slot :name="列 prop">`：`<slot>` 取的是**当前组件自己**的
@@ -104,8 +127,8 @@ function columnSlot(name: string) {
     v-else
     :prop="column.prop"
     :label="column.label"
-    :width="column.width"
-    :min-width="column.minWidth"
+    :width="widthBinding"
+    :min-width="minWidthBinding"
     :fixed="column.fixed ?? (column.valueType === 'option' ? 'right' : undefined)"
     :align="column.align ?? (column.valueType === 'option' ? 'center' : undefined)"
     :header-align="column.headerAlign"

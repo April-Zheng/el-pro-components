@@ -20,9 +20,12 @@
  * 2. **`loading` 只收布尔 + `#loading` 插槽**，不吃 antd 的 SpinProps（Element Plus 没这个概念）。
  * 3. **`footer` 用插槽而不是数组**。数组在模板里没法写条件渲染。
  * 4. **`fixedHeader` 用 el-affix**（antd Affix 的对应物），`affixProps.offset` 决定吸顶偏移。
+ *    偏移默认取「布局顶栏高度」（从 ElProLayout provide 进来），不是 0 ——
+ *    给 0 的话页头会钉在视口最顶上，把顶栏盖掉。不在布局里用时回落到 0。
  */
-import { computed, defineComponent, getCurrentInstance, h, ref, useSlots, watch } from 'vue'
+import { computed, defineComponent, getCurrentInstance, h, inject, ref, useSlots, watch } from 'vue'
 import { ElAffix, ElTabPane, ElTabs, ElWatermark } from 'element-plus'
+import { PRO_LAYOUT } from '../../core/layoutContext'
 import type { ProBreadcrumbItem, ProPageContainerProps } from '../../types'
 import ElProPageHeader from './ElProPageHeader.vue'
 import ElProFooterToolbar from './ElProFooterToolbar.vue'
@@ -201,7 +204,18 @@ function onTabChange(key: string | number) {
 
 /* -------------------------------- 布局细节 -------------------------------- */
 
-const affixOffset = computed(() => Number(props.affixProps?.offset ?? 0))
+/** 外层有没有 ProLayout。没有时吸顶偏移就是 0（贴视口顶，正确） */
+const layoutCtx = inject(PRO_LAYOUT, null)
+
+/**
+ * 吸顶偏移。优先级：显式 affixProps.offset > 布局顶栏高度 > 0。
+ *
+ * 中间这一档是关键：页面不该知道「顶栏 56px」这种数字，
+ * 也不该为了吸顶不被顶栏盖住而被迫传参 —— 那是布局的职责。
+ */
+const affixOffset = computed(() =>
+  Number(props.affixProps?.offset ?? layoutCtx?.headerHeight ?? 0),
+)
 
 /** 只有「顶栏布局 + 固定宽度」才收窄，和源码一致 */
 const isWide = computed(() => props.contentWidth === 'Fixed' && props.layout === 'top')

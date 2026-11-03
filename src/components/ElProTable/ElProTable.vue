@@ -101,6 +101,12 @@ const emit = defineEmits<{
   load: [any[]]
   error: [Error]
   'selection-change': [any[]]
+  /**
+   * 加载态变化。
+   * 页面常常要让**别的组件**跟着表格转圈（筛选区的查询按钮、页头的刷新图标），
+   * 而 loading 是表格内部状态，外面读不到 —— 所以单独派一个事件。
+   */
+  'loading-change': [boolean]
   'update:columnOrder': [string[]]
   'update:columnFixed': [ColumnFixedState]
   'update:editableKeys': [(string | number)[]]
@@ -578,6 +584,9 @@ watch(
   () => void table.action.reload(true),
 )
 
+/** loading 是内部状态，外面读不到；页面要让别的组件跟着转圈就得有这个事件 */
+watch(loading, (val) => emit('loading-change', val))
+
 /** 列插槽名：优先用 prop，操作列没写 prop 时用 'option' */
 function slotName(col: ProColumn) {
   return String(col.prop ?? (col.valueType === 'option' ? 'option' : ''))
@@ -628,6 +637,13 @@ defineExpose({
   /** 拿到内部数据，便于在外部做导出等操作 */
   getData: () => data.value,
   getSelected: () => table.selectedRows.value,
+  /**
+   * 当前条件下的总条数。
+   * `@load` 只给当前页的数据，页头统计（「共 N 单」）这类需求拿不到 total，
+   * 所以单独开一个 —— `@load` 触发时 `total` 已经写好了，在回调里直接读就行。
+   */
+  getTotal: () => table.total.value,
+  getPage: () => ({ current: table.current.value, pageSize: table.pageSize.value }),
   /* ---- 行内编辑 ---- */
   startEdit,
   saveRow,

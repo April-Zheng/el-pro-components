@@ -133,6 +133,19 @@ type ProRequest<T> = (
 
 插槽：`#toolbar`（标题区）、`#toolbarActions`（右侧按钮）、`#batch`（批量操作）、`#empty`、`#${列的 prop}`（列自定义渲染），以及**默认插槽**（往表格里插任意 `el-table-column`）。
 
+事件与方法：
+
+| 名称 | 说明 |
+| --- | --- |
+| `@load(data)` | 每次加载完成。此时 `getTotal()` 已经写好，可以直接读 |
+| `@loading-change(boolean)` | 加载态变化。**页面要让别的组件跟着转圈（筛选按钮、页头刷新）就靠它** |
+| `@selection-change(rows)` | 勾选变化。`row-key` + `selection` 时自动开 `reserve-selection`，跨页勾选会累计 |
+| `@error(err)` | 请求失败 |
+| `reload(resetPage?)` / `reloadAndRest()` / `reset()` | 重查 / 回第一页重查 / 连搜索条件一起重置 |
+| `setPage({ current, pageSize })` | 改页码 |
+| `clearSelected()` | 清空勾选（同时清掉跨页保留的那部分） |
+| `getData()` / `getSelected()` / `getTotal()` / `getPage()` | 读当前状态，导出、页头统计、删空回退都要用 |
+
 #### 多级表头
 
 `columns` 里写 `children` 就是分组表头，可以继续嵌套：
@@ -201,6 +214,26 @@ tableRef.value.clearSelected()
 tableRef.value.setPage({ current: 3 })
 tableRef.value.getData()         // 当前页数据，可用于导出
 ```
+
+#### 列宽：`width` 是下限，不是死宽
+
+表格总是撑满容器，`width` 只是**下限**（内部传给 el-table 的是 `min-width`），
+容器比所有列加起来还宽时，多出来的宽度按比例摊给各列 —— 和 antd `table-layout: auto` 一个表现。
+
+```ts
+const columns: ProColumn[] = [
+  { prop: 'orderNo', label: '订单号', width: 168 },   // 容器宽时会长到 ~200
+  { prop: 'amount', label: '金额', width: 128 },
+  { prop: 'icon', label: '', width: 40, flex: false }, // flex: false → 钉死 40
+]
+```
+
+要钉死某列（图标列、状态点这类）就加 `flex: false`，它走原生 `width`，不参与分配。
+
+> 为什么必须这么干：el-table 只在**存在没有 `width` 的列**时才分配剩余宽度
+> （`if (flexColumns.length > 0 && fit)`）。schema 里每列都写了 `width` 时它一步都不动，
+> 表格停在 Σwidth，右边留一条空白。这不是 el-table 的 bug，是它的语义和 antd 不一样；
+> 所以适配层把 `width` 当 `min-width` 传，把这个差异抹平。
 
 #### 行内编辑
 
@@ -436,7 +469,12 @@ async function create(values: Record<string, any>) {
 只负责「长什么样」，不 import `vue-router`。跳转交给 `el-menu` 的 `router` 模式，或自己监听 `@select`。
 面包屑从菜单树自动推导，详情页这类匹配不到菜单的路径会退化为最长前缀匹配。
 
-根节点上还挂了一个 CSS 变量 `--el-pro-sider-width`（折叠时会变），给底部固定工具条避让侧栏用。
+根节点上还挂了两个 CSS 变量：`--el-pro-sider-width`（折叠时会变，给底部固定工具条避让侧栏用）、
+`--el-pro-layout-header-height`（顶栏高度，吸顶避让用）。
+
+**顶栏和侧栏都是 `position: sticky`**：整页照常滚动，但这两块不跟着走。同时布局会
+`provide` 一份 `{ headerHeight: 56 }` 给页面层 —— `ElProPageContainer` 拿它当吸顶偏移的默认值，
+所以页面写 `fixed-header` 就够了，不用自己算「顶栏多高」这种数字。
 
 ### ElProPageContainer
 
@@ -481,7 +519,7 @@ async function create(values: Record<string, any>) {
 | `breadcrumbRender` | `false` 不渲染面包屑；传函数完全接管（返回 `null` 也等于不渲染） |
 | `tabList` / `tabActiveKey` / `tabProps` | 页头底部的 tab，配 `v-model:tab-active-key` |
 | `loading` | **只顶掉内容区**，页头和 tab 留着，切页不闪 |
-| `fixedHeader` / `affixProps` | 页头吸顶（`el-affix`），`affixProps.offset` 就是吸顶偏移 |
+| `fixedHeader` / `affixProps` | 页头吸顶（`el-affix`）。偏移默认取**布局顶栏高度**（从 `ElProLayout` 注入），显式写 `affixProps.offset` 可覆盖；不在布局里时为 0 |
 | `contentWidth` / `layout` | `Fixed` + `layout: 'top'` 才收窄到 1152px，和源码一致 |
 | `pageHeaderRender` | `false` 整块页头不要；传函数自己渲染 |
 | `header` | 逐项覆盖页头 props（浅合并，优先级更高） |
@@ -501,6 +539,76 @@ async function create(values: Record<string, any>) {
   最省事的写法是 `offsetLeft: 'var(--el-pro-sider-width, 0px)'`，跟着菜单折叠自动变。
 
 `ElProFooterToolbar` 单独用也成立（比如塞进一张卡片里，这时传 `:fixed="false"`）。
+
+### 一条完整链路：订单页
+
+`demo/pages/OrderPage.vue`（`?page=/order`）是一条真能跑的链路：页头 tab → 筛选 → 分页排序 →
+跨页勾选批量 → 新建 / 编辑 → 详情抽屉。它的意义不是「再把组件演一遍」，而是当验收用例 ——
+单组件 demo 不会暴露下面这些接缝问题，拼成一页立刻就露。
+
+![订单页](docs/screenshots/order-page.png)
+
+五条经验，按踩坑顺序排：
+
+**1. 筛选条件分「草稿」和「已提交」两份。** 草稿是筛选区正在编辑的值，已提交才是喂给表格的。
+不分开的话，用户每敲一个字都会触发一次请求。
+
+```ts
+const filterModel = reactive<Record<string, any>>({})   // 草稿：交给 ElProQueryFilter
+const committed = reactive<Record<string, any>>({})     // 已提交：交给 ElProTable 的 :params
+
+function onSearch(values: Record<string, any>) {
+  for (const key of Object.keys(committed)) delete committed[key]  // 先删，上一次的条件才会真的消失
+  Object.assign(committed, values)
+}
+```
+
+**2. tab 要从条件派生，不要另存一份。** 写成 `ref('all')` 的那一刻就有两个真相了：
+在筛选区清掉状态、或点重置之后，tab 还亮着「待付款」。派生之后反而多一个好处 ——
+在筛选区改状态并查询，tab 会自己跟着亮。
+
+```ts
+const activeTab = computed<string | number>({
+  get: () => (committed.status as string) ?? 'all',
+  set: (key) => {
+    const status = key === 'all' ? undefined : String(key)
+    if (status === undefined) delete filterModel.status
+    else filterModel.status = status
+    if (status === undefined) delete committed.status
+    else committed.status = status
+  },
+})
+```
+
+**3. 查询按钮的 loading 要从 `@loading-change` 接。** 页面读不到表格内部的 loading，
+但按钮该转到数据回来为止。别自己用「点查询置 true、`@load` 置 false」去模拟 ——
+条件没变化时压根不发请求，也就等不到 `@load`，按钮会永远转下去。
+
+```vue
+<ElProQueryFilter :loading="querying" @search="onSearch" />
+<ElProTable @loading-change="(v) => (querying = v)" @load="onTableLoad" />
+```
+
+**4. 条件一变就清空勾选。** 表格开了 `reserve-selection`，跨页勾选会保留 —— 这是好事，
+但筛选一变，勾中的行可能已经不在结果里，批量操作就作用到了用户看不见的行上。
+
+**5. 删空最后一页要退一页，不是回第一页。** `reload()` 会停在原页码：第 7 页只有 1 条，
+删掉后表格空白、分页器还写着第 7 页。回退一页保住位置感，回第一页会让用户迷失。
+
+```ts
+async function refreshAfterRemove(removed: number) {
+  const page = tableRef.value?.getPage()
+  const rowsOnPage = tableRef.value?.getData().length ?? 0
+  if (page && page.current > 1 && rowsOnPage - removed <= 0) {
+    await tableRef.value?.setPage({ current: page.current - 1 })
+    return
+  }
+  await tableRef.value?.reload()
+}
+```
+
+另外两个页层面的决定：**列表列和筛选列分开写**（共用一份要到处补 `hideInTable` / `hideInSearch`，
+而两边字段根本不是一回事）；**筛选区自己不带卡片**，白底和间距是页面的选择。
 
 ### ElProCard
 
@@ -727,6 +835,19 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
   自检办法：`document.querySelector('.xxx').__vueParentComponent.props` 直接看运行时真值。
 - **递归组件里写 `<slot :name="动态名">` 取的是它自己的 `$slots`。** 父组件传下来的列插槽在子组件里看不到，
   而且**不报错、只渲染空白**。要按名取父级插槽，得拿 `ctx.slots[name]` 自己渲染成组件（见 `TableColumnNode.vue`）。
+- **el-table 的「自撑开」是有前提的。** 只有存在 `width` 不是数字的列时它才分配剩余宽度
+  （`table-layout.mjs`：`if (flexColumns.length > 0 && fit)`）。schema 每列都写了 `width` 时，
+  表格就是 Σwidth，右边一条空白 —— 看着像「没撑满」，实际是它按字面执行了。
+  适配层把 `width` 当 `min-width` 传，让每列都成为 flex 列；`flex: false` 的列保留原生 `width`。
+- **吸顶偏移给 0 会盖住布局顶栏。** `el-affix` 的 `offset` 是「钉在视口往下多少像素」，给 0 就是钉在最顶上。
+  在 `ProLayout` 里这个位置正好是顶栏，于是页头把折叠按钮和面包屑盖掉。偏移必须等于顶栏高度，
+  而这个数只有布局知道 —— 走 `provide/inject`（`core/layoutContext.ts`），页面不用写魔法数。
+  另外顶栏/侧栏要自己 `position: sticky`（侧栏还得 `align-self: flex-start`，否则被 stretch 满高，sticky 等于没写），
+  不然滚动时它们会跟着内容一起被卷走。
+- **块级容器里的「两个输入框拼一行」不会自己横排。** `digitRange` 的两个 `ElInputNumber` 都带
+  `.el-pro-field--full`（`width: 100%`），在 `div` 里就是一列三个 block：最小值 / `~` / 最大值各占一行，
+  表单项从 32px 被撑到 99px，旁边一起排的项全被挤到下一行。必须显式 `display: flex` +
+  子项 `flex: 1 1 0 / width: auto / min-width: 0`。
 
 ## Roadmap
 
@@ -742,6 +863,8 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] **列表型字段 `formList`**（增删 / 复制 / 嵌套校验）
 - [x] **字段联动 `dependency`**（显隐 + 按值改列配置）
 - [x] **`ElProQueryFilter`**（独立筛选区，默认折叠 + 响应式栅格）
+- [x] **`ElProPageContainer` / `ElProPageHeader` / `ElProFooterToolbar`**（页面骨架，页头可吸顶）
+- [x] **真业务链路验收**（订单页：tab + 筛选 + 批量 + 弹窗 + 抽屉串成一页），顺带补 `getTotal` / `getPage` / `@loading-change`
 - [ ] 表单分组 `group`
 - [ ] 列设置的分组拖拽（现在有分组就关掉拖拽）
 - [ ] 表格请求层补齐 `postData` / `onLoad` / `polling` / `debounceTime`
@@ -758,7 +881,7 @@ npm run build       # 打包库产物到 dist/
 npm run typecheck   # 类型检查
 ```
 
-playground 支持 `?page=/users`、`/page-container`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/query-filter`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
+playground 支持 `?page=/order`、`/users`、`/page-container`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/query-filter`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
 
 demo 本身也按「壳 / 页 / 数据」拆开了，加一个示例只动 `pages/` 一个文件：
 
@@ -768,13 +891,16 @@ demo/
 ├── menu.ts                    # 侧边菜单 + ?page= 解析
 ├── data/
 │   ├── enums.ts               # 角色 / 状态字典
-│   └── mock.ts                # User 类型、87 条假数据、requestUsers、delay
+│   ├── mock.ts                # User 类型、87 条假数据、requestUsers、delay
+│   └── orders.ts              # 订单：类型、64 条数据、请求 + 增删改（真业务页用）
 ├── composables/
 │   └── useUserEditor.ts       # 「编辑谁、弹窗开没开」这类页面级状态
 ├── components/
 │   └── UserEditDialog.vue     # 新建 / 编辑弹窗（用户页和列表页共用）
 └── pages/
+    ├── OrderPage.vue          # 真业务链路：页头 tab + 筛选 + 表格 + 批量 + 弹窗 + 抽屉
     ├── UsersPage.vue          # 列配置驱动的 CRUD 主场景
+    ├── PageContainerPage.vue  # 页面骨架：页头 / tab / 底部固定条
     ├── FormPage.vue
     ├── FormContainerPage.vue  # 弹窗 / 抽屉表单
     ├── FormListPage.vue       # 字段组（可增删）

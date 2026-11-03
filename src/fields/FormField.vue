@@ -389,6 +389,32 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
 .el-pro-field--full {
   width: 100%;
 }
+/*
+ * 数字/区间：两个输入框并排一行。
+ *
+ * 原来这里什么样式都没有，而两个 ElInputNumber 都带着 `.el-pro-field--full`
+ * （width: 100%），在块级容器里就是一列三个 block —— 最小值、~、最大值
+ * 各占一行，表单项被撑到 99px 高，挨着它的项全被挤到下一排去。
+ * 所以必须显式 flex，并把子项的 width: 100% 换成「按剩余空间分」。
+ */
+.el-pro-field--range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.el-pro-field--range > .el-pro-field--full {
+  flex: 1 1 0;
+  /* 选择性比 .el-input-number 的固定 150px 高，才盖得住 */
+  width: auto;
+  min-width: 0;
+}
+.el-pro-field__range-sep {
+  flex: none;
+  color: var(--el-text-color-placeholder);
+  line-height: 1;
+}
 .el-pro-field--date {
   min-width: 180px;
 }
