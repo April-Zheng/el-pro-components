@@ -12,16 +12,22 @@
  * - 行拖拽排序：那是业务态（改 sort 字段），和列顺序不是一回事，交给 sortablejs
  * - 受控数据模式（value/onChange，不配 request）：本库定位是「配 request 的 CRUD 页」
  */
-import { computed, onBeforeUnmount, reactive, ref, useAttrs, useSlots, watch } from 'vue'
+import { computed, onBeforeUnmount, provide, reactive, ref, toRef, useAttrs, useSlots, watch } from 'vue'
+import type { Slots } from 'vue'
 import { ElButton, ElPagination, ElTable, ElTableColumn } from 'element-plus'
-import CellRenderer from '../../fields/CellRenderer.vue'
-import FormField from '../../fields/FormField.vue'
 import { useTable } from '../../core/useTable'
-import { applyColumnOrder, isSettableColumn, sortPropsByFixed } from '../../core/column'
+import {
+  applyColumnOrder,
+  filterVisibleColumns,
+  isSettableColumn,
+  sortPropsByFixed,
+} from '../../core/column'
 import type { ColumnFixedState } from '../../core/column'
+import { PRO_TABLE_CELL } from '../../core/tableCellContext'
 import { DISPLAY_ONLY_VALUE_TYPES } from '../../core/valueType'
 import type { ProColumn, ProEditableConfig, ProRequest, TableSize } from '../../types'
 import SearchForm from './SearchForm.vue'
+import TableColumnNode from './TableColumnNode.vue'
 import TableToolbar from './TableToolbar.vue'
 
 defineOptions({ name: 'ElProTable', inheritAttrs: false })
@@ -464,9 +470,14 @@ const orderedColumns = computed<ProColumn[]>(() => {
   return [...cols, editActionColumn]
 })
 
-/** 表格真正渲染的列：再受列设置面板的显隐控制 */
+/**
+ * 表格真正渲染的列：再受列设置面板的显隐控制。
+ *
+ * 用递归过滤而不是单层 filter —— 分组列的显隐状态挂在叶子列上，
+ * 子列全隐藏时整组要一起消失，否则表头会留个空壳。
+ */
 const renderColumns = computed(() =>
-  orderedColumns.value.filter((c) => {
+  filterVisibleColumns(orderedColumns.value, (c) => {
     if (!c.prop) return true
     // 索引列和操作列不允许被隐藏，否则用户会把自己锁死
     if (c.valueType === 'index' || c.valueType === 'indexBorder' || c.valueType === 'option') return true
@@ -572,10 +583,41 @@ function slotName(col: ProColumn) {
   return String(col.prop ?? (col.valueType === 'option' ? 'option' : ''))
 }
 
+/**
+ * `useSlots()` 的返回类型是按模板里出现过的插槽名推出来的字面量类型，
+ * 没有索引签名，所以「按列 prop 动态取插槽」必须自己放宽成字典。
+ */
+const slotMap = slots as Record<string, unknown>
+
 function hasSlot(col: ProColumn) {
   const name = slotName(col)
-  return !!name && !!slots[name]
+  return !!name && !!slotMap[name]
 }
+
+/**
+ * 单元格渲染要用的状态打包给 TableColumnNode。
+ *
+ * 只有「递归列」这个场景需要这些，所以不往 props 上摊：
+ * 多级表头无论嵌几层，子组件拿到的都是同一份上下文，参数表不随层数膨胀。
+ */
+provide(PRO_TABLE_CELL, {
+  slots: slots as unknown as Slots,
+  emptyText: toRef(props, 'emptyText'),
+  editable: editableConfig,
+  showDeleteRow,
+  savingKey,
+  slotName,
+  hasSlot,
+  keyOf,
+  isEditing,
+  isEditCell,
+  draftOf,
+  setDraftValue,
+  startEdit,
+  saveRow,
+  cancelRow,
+  removeRow,
+})
 
 defineExpose({
   reload: table.action.reload,
@@ -659,118 +701,18 @@ defineExpose({
       >
         <ElTableColumn v-if="selection" type="selection" width="46" :reserve-selection="!!rowKey" />
 
-        <ElTableColumn
-          v-for="col in renderColumns"
-          :key="slotName(col) || col.label"
-          :prop="col.prop"
-          :label="col.label"
-          :width="col.width"
-          :min-width="col.minWidth"
-          :fixed="col.fixed ?? (col.valueType === 'option' ? 'right' : undefined)"
-          :align="col.align ?? (col.valueType === 'option' ? 'center' : undefined)"
-          :header-align="col.headerAlign"
-          :sortable="col.sortable"
-          :sort-method="col.sortMethod"
-          :sort-by="col.sortBy"
-          :show-overflow-tooltip="col.showOverflowTooltip"
-          :class-name="col.className"
-          :label-class-name="col.labelClassName"
-          :resizable="col.resizable"
-          :formatter="col.formatter"
-        >
-          <template #default="{ row, $index }">
-            <slot
-              v-if="hasSlot(col)"
-              :name="slotName(col)"
-              :row="row"
-              :column="col"
-              :index="$index"
-              :value="col.prop ? row[col.prop] : undefined"
-              :editing="isEditing(row)"
-              :edit="() => startEdit(row)"
-              :save="() => saveRow(row)"
-              :cancel="() => cancelRow(row)"
-              :remove="() => removeRow(row)"
-            />
-            <component
-              :is="col.cellComponent"
-              v-else-if="col.cellComponent"
-              :row="row"
-              :column="col"
-              :index="$index"
-              :value="col.prop ? row[col.prop] : undefined"
-            />
-            <!-- 编辑态：直接复用表单那套控件，valueType 词汇全场统一 -->
-            <FormField
-              v-else-if="isEditCell(row, col, $index)"
-              :model-value="col.prop ? draftOf(row)[col.prop] : undefined"
-              :column="col"
-              @update:model-value="(v: any) => col.prop && setDraftValue(row, col.prop, v)"
-            />
-            <!-- 可编辑表格的操作列 -->
-            <template v-else-if="editableConfig && col.valueType === 'option'">
-              <slot
-                name="editableActions"
-                :row="row"
-                :column="col"
-                :index="$index"
-                :editing="isEditing(row)"
-                :edit="() => startEdit(row)"
-                :save="() => saveRow(row)"
-                :cancel="() => cancelRow(row)"
-                :remove="() => removeRow(row)"
-              >
-                <div class="el-pro-table__row-actions">
-                  <template v-if="isEditing(row)">
-                    <ElButton
-                      link
-                      type="primary"
-                      size="small"
-                      :loading="savingKey === keyOf(row)"
-                      @click="saveRow(row)"
-                    >
-                      保存
-                    </ElButton>
-                    <ElButton link size="small" @click="cancelRow(row)">取消</ElButton>
-                    <ElButton
-                      v-if="showDeleteRow"
-                      link
-                      type="danger"
-                      size="small"
-                      @click="removeRow(row)"
-                    >
-                      删除
-                    </ElButton>
-                  </template>
-                  <template v-else>
-                    <ElButton link type="primary" size="small" @click="startEdit(row)">编辑</ElButton>
-                    <ElButton
-                      v-if="showDeleteRow"
-                      link
-                      type="danger"
-                      size="small"
-                      @click="removeRow(row)"
-                    >
-                      删除
-                    </ElButton>
-                  </template>
-                </div>
-              </slot>
-            </template>
-            <CellRenderer
-              v-else
-              :value="col.prop ? row[col.prop] : undefined"
-              :column="col"
-              :row="row"
-              :index="$index"
-              :empty-text="emptyText"
-            />
-          </template>
+        <!--
+          默认插槽：插任意 el-table-column（展开行、自定义前置列）。
+          放在 schema 列**之前**：展开列按惯例在最左；操作列走 schema 的
+          valueType: 'option'（fixed: right），必须排在最后，否则 sticky offset 会算错。
+        -->
+        <slot />
 
-          <template v-if="col.showOverflowTooltip === false" #header>
-            {{ col.label }}
+        <TableColumnNode v-for="(col, i) in renderColumns" :key="slotName(col) || col.label || String(i)" :column="col">
+          <template v-if="$slots.editableActions" #editableActions="scope">
+            <slot name="editableActions" v-bind="scope" />
           </template>
-        </ElTableColumn>
+        </TableColumnNode>
 
         <template #empty>
           <slot name="empty">

@@ -8,11 +8,16 @@
  *
  * 本组件**只上报用户意图**，三份列状态（显隐 / 顺序 / 固定）都归 ElProTable 所有。
  * 面板里拼新状态会踩「props 快照」的坑：同一 tick 连点两次，第二次基于旧值覆盖第一次。
+ *
+ * 分组列（有 children 的列）在面板里显示成一行「组」，下面缩进列出叶子列：
+ * - 组的勾选框是**全选/全不选它下面的叶子**，自身不落状态（组没有 prop）
+ * - 分组存在时**关掉拖拽**：order 是扁平 prop 数组，表达不了「换到另一个组里去」
+ * - 分组下的叶子**不给固定按钮**：el-table 固定的是顶层列，固定在分组下面不会生效
  */
 import { computed, ref } from 'vue'
 import { ElButton, ElCheckbox, ElTooltip } from 'element-plus'
 import type { ProColumn } from '../../types'
-import { isSettableColumn, moveItem } from '../../core/column'
+import { flattenLeaves, hasGroupColumns, isSettableColumn, moveItem } from '../../core/column'
 import type { ColumnFixed, ColumnFixedState } from '../../core/column'
 
 const props = withDefaults(
@@ -37,22 +42,70 @@ const emit = defineEmits<{
   pin: [string, ColumnFixed]
 }>()
 
-/** 能进面板的列。判定逻辑在 core/column.ts，和 ElProTable 共用一份 */
-const settableColumns = computed(() => props.columns.filter(isSettableColumn))
+/* ------------------------------ 行模型 ------------------------------ */
+
+type SettingRow =
+  | { kind: 'group'; key: string; label: string; props: string[] }
+  | { kind: 'leaf'; key: string; col: ProColumn; depth: number }
+
+const grouped = computed(() => hasGroupColumns(props.columns))
+
+/**
+ * 面板按「组 → 它的叶子」铺开。
+ *
+ * 为什么不是 `columns.filter(isSettableColumn)`：分组列没有 prop，
+ * 直接被过滤掉，它下面的叶子就永远进不了面板 —— 用户会发现表格里有列、
+ * 面板里没有，只能改代码。
+ */
+const rows = computed<SettingRow[]>(() => {
+  const out: SettingRow[] = []
+  for (const col of props.columns) {
+    if (col.children?.length) {
+      const leaves = flattenLeaves(col.children).filter(isSettableColumn)
+      if (!leaves.length) continue
+      out.push({
+        kind: 'group',
+        key: `g:${col.label ?? col.prop ?? out.length}`,
+        label: String(col.label ?? ''),
+        props: leaves.map((l) => l.prop!),
+      })
+      for (const leaf of leaves) {
+        out.push({ kind: 'leaf', key: `l:${leaf.prop}`, col: leaf, depth: 1 })
+      }
+    } else if (isSettableColumn(col)) {
+      out.push({ kind: 'leaf', key: `l:${col.prop}`, col, depth: 0 })
+    }
+  }
+  return out
+})
+
+/** 参与显隐状态的所有叶子列（分组列不参与） */
+const leafColumns = computed(() =>
+  rows.value.flatMap((r) => (r.kind === 'leaf' ? [r.col] : [])),
+)
+
+/* ------------------------------ 显隐 ------------------------------ */
+
+function isVisible(prop: string) {
+  return props.columnState[prop] !== false
+}
+
+/** 一次性把「可见的 prop 集合」换算成完整状态表再上报，避免半张表 */
+function emitState(visibleKeys: string[]) {
+  const next: Record<string, boolean> = {}
+  for (const c of leafColumns.value) next[c.prop!] = visibleKeys.includes(c.prop!)
+  emit('update:columnState', next)
+}
 
 const visibleProps = computed({
-  get: () => settableColumns.value.filter((c) => props.columnState[c.prop!] !== false).map((c) => c.prop!),
-  set: (keys: string[]) => {
-    const next: Record<string, boolean> = {}
-    for (const c of settableColumns.value) next[c.prop!] = keys.includes(c.prop!)
-    emit('update:columnState', next)
-  },
+  get: () => leafColumns.value.filter((c) => isVisible(c.prop!)).map((c) => c.prop!),
+  set: (keys: string[]) => emitState(keys),
 })
 
 const allChecked = computed({
-  get: () => visibleProps.value.length === settableColumns.value.length,
+  get: () => visibleProps.value.length === leafColumns.value.length,
   set: (val: boolean) => {
-    visibleProps.value = val ? settableColumns.value.map((c) => c.prop!) : []
+    visibleProps.value = val ? leafColumns.value.map((c) => c.prop!) : []
   },
 })
 
@@ -60,6 +113,24 @@ function toggleColumn(prop: string, checked: boolean) {
   const keys = new Set(visibleProps.value)
   if (checked) keys.add(prop)
   else keys.delete(prop)
+  visibleProps.value = [...keys]
+}
+
+function groupChecked(childProps: string[]) {
+  return childProps.every(isVisible)
+}
+
+function groupIndeterminate(childProps: string[]) {
+  const visible = childProps.filter(isVisible).length
+  return visible > 0 && visible < childProps.length
+}
+
+function toggleGroup(childProps: string[], checked: boolean) {
+  const keys = new Set(visibleProps.value)
+  for (const p of childProps) {
+    if (checked) keys.add(p)
+    else keys.delete(p)
+  }
   visibleProps.value = [...keys]
 }
 
@@ -94,7 +165,7 @@ function onDrop(index: number) {
   emit(
     'update:columnOrder',
     moveItem(
-      settableColumns.value.map((c) => c.prop!),
+      leafColumns.value.map((c) => c.prop!),
       from,
       index,
     ),
@@ -109,7 +180,7 @@ function resetDrag() {
 
 function resetColumns() {
   const next: Record<string, boolean> = {}
-  for (const c of settableColumns.value) next[c.prop!] = true
+  for (const c of leafColumns.value) next[c.prop!] = true
   emit('update:columnState', next)
   // 空数组 = 回到 columns 的原始顺序，不用记一份默认顺序
   emit('update:columnOrder', [])
@@ -136,86 +207,105 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
 
     <!-- 用原生 HTML5 拖拽，不引 sortablejs：一行小列表不值一个运行时依赖 -->
     <div class="el-pro-setting__list">
-      <div
-        v-for="(col, index) in settableColumns"
-        :key="col.prop"
-        class="el-pro-setting__row"
-        :class="{
-          'is-dragging': dragFrom === index,
-          'is-over-top': dragOver === index && dragFrom > index,
-          'is-over-bottom': dragOver === index && dragFrom < index,
-        }"
-        draggable="true"
-        @dragstart="onDragStart(index, $event)"
-        @dragover.prevent="onDragOver(index)"
-        @drop.prevent="onDrop(index)"
-        @dragend="resetDrag"
-      >
-        <span class="el-pro-setting__grip" aria-hidden="true">
-          <svg viewBox="0 0 8 14" width="8" height="14" fill="currentColor">
-            <circle cx="2" cy="2.5" r="1" />
-            <circle cx="6" cy="2.5" r="1" />
-            <circle cx="2" cy="7" r="1" />
-            <circle cx="6" cy="7" r="1" />
-            <circle cx="2" cy="11.5" r="1" />
-            <circle cx="6" cy="11.5" r="1" />
-          </svg>
-        </span>
-        <ElCheckbox
-          :model-value="visibleProps.includes(col.prop!)"
-          :disabled="!!col.disableSetting"
-          size="small"
-          @update:model-value="(v: any) => toggleColumn(col.prop!, !!v)"
-        >
-          {{ col.label ?? col.prop }}
-        </ElCheckbox>
+      <template v-for="(row, index) in rows" :key="row.key">
+        <!-- 分组：只是全选开关，不落自己的显隐状态 -->
+        <div v-if="row.kind === 'group'" class="el-pro-setting__row is-group">
+          <span class="el-pro-setting__grip is-hidden" aria-hidden="true" />
+          <ElCheckbox
+            :model-value="groupChecked(row.props)"
+            :indeterminate="groupIndeterminate(row.props)"
+            size="small"
+            @update:model-value="(v: any) => toggleGroup(row.props, !!v)"
+          >
+            {{ row.label }}
+          </ElCheckbox>
+        </div>
 
-        <!--
-          固定在列首 / 列尾。用 ElTooltip 而不是原生 title：
-          title 要悬停近 1 秒、样式跟系统走，和面板里其它提示不是一套。
-          激活态的文案换成「取消…」，否则用户不知道再点一次会发生什么。
-          这里每个按钮各挂一个 ElTooltip —— ElTooltip 的内容是懒渲染的，
-          悬停前不产生 popper 节点，20 行也就 40 个空壳，不必为省这点开销牺牲体验。
-        -->
-        <span class="el-pro-setting__pins">
-          <ElTooltip
-            :content="fixedOf(col) === 'left' ? '取消固定在列首' : '固定在列首'"
-            placement="top"
-            :show-after="200"
+        <div
+          v-else
+          class="el-pro-setting__row"
+          :class="{
+            'is-child': row.depth > 0,
+            'is-dragging': dragFrom === index,
+            'is-over-top': dragOver === index && dragFrom > index,
+            'is-over-bottom': dragOver === index && dragFrom < index,
+          }"
+          :draggable="!grouped"
+          @dragstart="onDragStart(index, $event)"
+          @dragover.prevent="onDragOver(index)"
+          @drop.prevent="onDrop(index)"
+          @dragend="resetDrag"
+        >
+          <span
+            class="el-pro-setting__grip"
+            :class="{ 'is-hidden': grouped }"
+            aria-hidden="true"
           >
-            <button
-              type="button"
-              class="el-pro-setting__pin"
-              :class="{ 'is-active': fixedOf(col) === 'left' }"
-              :aria-label="fixedOf(col) === 'left' ? '取消固定在列首' : '固定在列首'"
-              @click.stop="emit('pin', col.prop!, 'left')"
-            >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M3.2 2.6v10.8" stroke-linecap="round" />
-                <path d="M12.4 4.2 8.2 8l4.2 3.8" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-          </ElTooltip>
-          <ElTooltip
-            :content="fixedOf(col) === 'right' ? '取消固定在列尾' : '固定在列尾'"
-            placement="top"
-            :show-after="200"
+            <svg viewBox="0 0 8 14" width="8" height="14" fill="currentColor">
+              <circle cx="2" cy="2.5" r="1" />
+              <circle cx="6" cy="2.5" r="1" />
+              <circle cx="2" cy="7" r="1" />
+              <circle cx="6" cy="7" r="1" />
+              <circle cx="2" cy="11.5" r="1" />
+              <circle cx="6" cy="11.5" r="1" />
+            </svg>
+          </span>
+          <ElCheckbox
+            :model-value="visibleProps.includes(row.col.prop!)"
+            :disabled="!!row.col.disableSetting"
+            size="small"
+            @update:model-value="(v: any) => toggleColumn(row.col.prop!, !!v)"
           >
-            <button
-              type="button"
-              class="el-pro-setting__pin"
-              :class="{ 'is-active': fixedOf(col) === 'right' }"
-              :aria-label="fixedOf(col) === 'right' ? '取消固定在列尾' : '固定在列尾'"
-              @click.stop="emit('pin', col.prop!, 'right')"
+            {{ row.col.label ?? row.col.prop }}
+          </ElCheckbox>
+
+          <!--
+            固定在列首 / 列尾。用 ElTooltip 而不是原生 title：
+            title 要悬停近 1 秒、样式跟系统走，和面板里其它提示不是一套。
+            激活态的文案换成「取消…」，否则用户不知道再点一次会发生什么。
+            这里每个按钮各挂一个 ElTooltip —— ElTooltip 的内容是懒渲染的，
+            悬停前不产生 popper 节点，20 行也就 40 个空壳，不必为省这点开销牺牲体验。
+          -->
+          <span v-if="row.depth === 0" class="el-pro-setting__pins">
+            <ElTooltip
+              :content="fixedOf(row.col) === 'left' ? '取消固定在列首' : '固定在列首'"
+              placement="top"
+              :show-after="200"
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M12.8 2.6v10.8" stroke-linecap="round" />
-                <path d="M3.6 4.2 7.8 8l-4.2 3.8" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-          </ElTooltip>
-        </span>
-      </div>
+              <button
+                type="button"
+                class="el-pro-setting__pin"
+                :class="{ 'is-active': fixedOf(row.col) === 'left' }"
+                :aria-label="fixedOf(row.col) === 'left' ? '取消固定在列首' : '固定在列首'"
+                @click.stop="emit('pin', row.col.prop!, 'left')"
+              >
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M3.2 2.6v10.8" stroke-linecap="round" />
+                  <path d="M12.4 4.2 8.2 8l4.2 3.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </ElTooltip>
+            <ElTooltip
+              :content="fixedOf(row.col) === 'right' ? '取消固定在列尾' : '固定在列尾'"
+              placement="top"
+              :show-after="200"
+            >
+              <button
+                type="button"
+                class="el-pro-setting__pin"
+                :class="{ 'is-active': fixedOf(row.col) === 'right' }"
+                :aria-label="fixedOf(row.col) === 'right' ? '取消固定在列尾' : '固定在列尾'"
+                @click.stop="emit('pin', row.col.prop!, 'right')"
+              >
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M12.8 2.6v10.8" stroke-linecap="round" />
+                  <path d="M3.6 4.2 7.8 8l-4.2 3.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </ElTooltip>
+          </span>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -254,6 +344,18 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
 .el-pro-setting__row:hover {
   background: var(--el-fill-color-light);
 }
+/* 分组行：压一层灰，和它下面的叶子列区分开 */
+.el-pro-setting__row.is-group {
+  background: var(--el-fill-color-lighter);
+  font-weight: 500;
+}
+.el-pro-setting__row.is-group:hover {
+  background: var(--el-fill-color-light);
+}
+/* 子列缩进。拖拽与固定都不给它用，缩进就是唯一的「从属」提示 */
+.el-pro-setting__row.is-child {
+  padding-left: 20px;
+}
 .el-pro-setting__row.is-dragging {
   opacity: 0.4;
 }
@@ -279,6 +381,10 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
   flex: none;
   color: var(--el-text-color-placeholder);
   cursor: grab;
+}
+.el-pro-setting__grip.is-hidden {
+  visibility: hidden;
+  cursor: default;
 }
 .el-pro-setting__row:active .el-pro-setting__grip {
   cursor: grabbing;

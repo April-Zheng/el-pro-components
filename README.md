@@ -127,7 +127,47 @@ type ProRequest<T> = (
 | `columnFixed` | 受控固定列（`{ prop: 'left' \| 'right' }`），配合 `v-model:column-fixed` |
 | `paramsAdapter` | 后端参数名转换 |
 
-插槽：`#toolbar`（标题区）、`#toolbarActions`（右侧按钮）、`#batch`（批量操作）、`#empty`、`#${列的 prop}`（列自定义渲染）。
+插槽：`#toolbar`（标题区）、`#toolbarActions`（右侧按钮）、`#batch`（批量操作）、`#empty`、`#${列的 prop}`（列自定义渲染），以及**默认插槽**（往表格里插任意 `el-table-column`）。
+
+#### 多级表头
+
+`columns` 里写 `children` 就是分组表头，可以继续嵌套：
+
+```ts
+const columns: ProColumn<User>[] = [
+  { label: '基础信息', children: [
+    { prop: 'name', label: '姓名' },
+    { prop: 'email', label: '邮箱' },
+  ]},
+  { label: '业绩', children: [
+    { prop: 'score', label: '评分', valueType: 'rate' },
+    { prop: 'amount', label: '金额', valueType: 'money', sortable: 'custom' },
+  ]},
+  { prop: 'status', label: '状态', valueType: 'status', valueEnum: STATUS_ENUM },
+]
+```
+
+三条约定：
+
+- **分组列不写 `prop`**：它不产生单元格，只是表头容器。写了也不会用上。
+- **显隐状态挂在叶子列上**：列设置面板里，组是一行「全选开关」，下面缩进列子列；子列全隐藏时整组一起消失，不会留个空表头。
+- **有分组时关闭拖拽、子列不给固定按钮**：顺序存的是扁平 prop 数组，表达不了「换到另一个组里去」；`el-table` 固定的也只是顶层列。与其点了没反应，不如不给。
+
+![多级表头](docs/screenshots/multi-level-header.png)
+
+#### 默认插槽：插 schema 表达不了的列
+
+`columns` 只描述「有 prop 的字段」。展开行、勾选列这类结构性列用默认插槽插，位置在 schema 列**之前**：
+
+```vue
+<ElProTable :columns="columns" :request="request">
+  <ElTableColumn type="expand" width="40">
+    <template #default="{ row }">{{ row.desc }}</template>
+  </ElTableColumn>
+</ElProTable>
+```
+
+操作列不要走这个插槽 —— 用 `{ valueType: 'option' }` 的列（自动 `fixed: 'right'`），它必须排在最后，否则 sticky offset 会算错。
 
 #### 列配置
 
@@ -135,9 +175,9 @@ type ProRequest<T> = (
 
 | 能力 | 说明 |
 | --- | --- |
-| 显示 / 隐藏 | 勾选框；`index` / `option` 列和 `hideInSetting` 的列不进面板，避免把自己锁死 |
-| 拖拽排序 | 原生 HTML5 拖拽，不引 sortablejs；只重排可设置列，索引列/操作列原地不动 |
-| **固定列首 / 列尾** | 每行右侧两个钉住图标，再点一次同一侧即取消 |
+| 显示 / 隐藏 | 勾选框；`index` / `option` 列和 `hideInSetting` 的列不进面板，避免把自己锁死。有多级表头时按「组 → 子列」展开，组上的勾选框是整组全选 |
+| 拖拽排序 | 原生 HTML5 拖拽，不引 sortablejs；只重排可设置列，索引列/操作列原地不动。**有分组列时整个关闭**（见多级表头那节） |
+| **固定列首 / 列尾** | 每行右侧两个钉住图标，再点一次同一侧即取消。分组下的子列没有这个按钮 |
 | 重置 | 显隐、顺序、固定一起回到 `columns` 的原始定义 |
 
 固定列会**连带重排顺序**：el-table 的 `fixed` 是 sticky + 逐列累加 offset，固定列夹在普通列中间会被盖住。所以按「左固定 → 普通 → 右固定」重排，组内保持原相对顺序（`sortPropsByFixed`），并把新顺序写回 `order`。
@@ -441,8 +481,8 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 
 - **`dateQuarter` / `dateQuarterRange` 表单里降级为月选择器。** Element Plus 没有季度选择器。展示没问题（能正确算出 `2026-Q4`），但选不了季度。需要的话传 `fieldComponent` 自定义。
 - **`ElProCard` 的 `split` 与 `wrap` 混用不保证好看。** 一行塞多个不同 `colSpan` 又换行时，分割线按 DOM 顺序画，可能出现「行首也带线」。
-- **表格没有多级表头。** `columns` 是扁平数组，`el-table-column` 的嵌套写法没有对应入口；顺带也就没法声明 `type="expand"` 的展开行。已经排在 Roadmap 第一位。
-- **列设置不支持分组列。** 上一条的衍生：没有嵌套结构，就没有「分组拖拽」可做。
+- **有分组列时列设置不能拖拽、子列不能固定。** 顺序状态是扁平 prop 数组，装不下「换到另一个组里去」；`el-table` 也只支持顶层列固定。
+- **默认插槽插的列排在 schema 列之前。** 想往后插，就只能用 schema 里的列（操作列走 `valueType: 'option'`）。
 
 ## 踩过的坑（改这块之前先看）
 
@@ -459,11 +499,12 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] `ElProStatistic` / `ElProStatisticCard`（含 `Group`）
 - [x] `ElProDescriptions` 支持 `request` 与响应式 `column`
 - [x] `Skeleton` 的 `result` 版式，`second` / `digitRange` 两个 valueType
-- [ ] **表格多级表头 + 默认插槽**（列设置分组、展开行都卡在这）
+- [x] **表格多级表头 + 默认插槽**（列设置里按组显隐）
+- [ ] 列设置的分组拖拽（现在有分组就关掉拖拽）
+- [ ] 表格请求层补齐 `postData` / `onLoad` / `polling` / `debounceTime`
 - [ ] 表单布局变体：`StepsForm` / `ModalForm` / `DrawerForm`
 - [ ] 表单分组 `group` 与列表型字段 `formList` / 字段联动 `dependency`
 - [ ] `QueryFilter`（表格页顶部独立的筛选区）
-- [ ] 列设置分组（嵌套表头 + 分组拖拽）
 - [ ] 导出当前列定义对应的 CSV
 - [ ] 行拖拽排序（`sortablejs` 可选依赖）
 
@@ -508,18 +549,19 @@ src/
 ├── core/
 │   ├── valueType.ts    # 格式化内核：值 → 文本/tag/进度，不 import 任何组件
 │   ├── useTable.ts     # 请求生命周期：分页/排序/搜索合并 + 竞态
-│   ├── column.ts       # 列的「可设置 / 可排序」判定与顺序应用
+│   ├── column.ts       # 列的「可设置 / 可排序」判定、顺序应用、分组展开与过滤
 │   ├── responsive.ts   # 断点订阅 + 响应式取值（colSpan / gutter / grid）
+│   ├── tableCellContext.ts # 单元格渲染的 provide/inject 契约（多级表头递归要用）
 │   └── cardContext.ts  # 卡片父子关系的 provide/inject 契约
 ├── fields/
 │   ├── CellRenderer.vue  # 展示侧外壳（读）
 │   └── FormField.vue     # 输入侧外壳（写）
 ├── components/
-│   ├── ElProTable/       # ElProTable + ElProEditableTable + SearchForm + TableToolbar + ColumnSetting
+│   ├── ElProTable/       # ElProTable + TableColumnNode（递归列）+ SearchForm + TableToolbar + ColumnSetting
 │   ├── ElProForm/
 │   ├── ElProDescriptions/
 │   ├── ElProLayout/
-│   ├── ElProCard/        # ElProCard / ElProCheckCard / ElProCheckCardGroup
+│   ├── ElProCard/        # ElProCard / ElProCheckCard(Group) / ElProStatistic(Group)
 │   ├── ElProList/
 │   └── ElProSkeleton/
 └── types.ts

@@ -448,6 +448,14 @@ export interface ProColumn<T = any> {
   formItemProps?: Record<string, any>
 
   /**
+   * 多级表头：有 `children` 时这一列变成分组表头，自己不产生单元格。
+   *
+   * 分组列不参与列设置的拖拽与固定（el-table 也没法固定「分组下的子列」），
+   * 但它下面的叶子列可以在面板里勾选显隐。
+   */
+  children?: ProColumn<T>[]
+
+  /**
    * 可编辑表格里这一列能否编辑。
    * - 不写：按 valueType 推断，纯展示型（index / option / progress / image / avatar / color / code）不可编辑
    * - true / false：强制

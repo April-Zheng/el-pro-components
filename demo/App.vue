@@ -10,6 +10,7 @@ import { ElTag } from 'element-plus'
 import { ElProLayout } from '@/index'
 import { initialPage, menus } from './menu'
 import UsersPage from './pages/UsersPage.vue'
+import GroupedPage from './pages/GroupedPage.vue'
 import FormPage from './pages/FormPage.vue'
 import DetailPage from './pages/DetailPage.vue'
 import CardPage from './pages/CardPage.vue'
@@ -34,6 +35,7 @@ const active = ref(initialPage())
     </template>
 
     <UsersPage v-if="active === '/users'" />
+    <GroupedPage v-else-if="active === '/grouped'" />
     <FormPage v-else-if="active === '/form'" />
     <DetailPage v-else-if="active === '/detail'" />
     <CardPage v-else-if="active === '/card'" />

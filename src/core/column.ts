@@ -58,6 +58,50 @@ export function moveItem<T>(list: T[], from: number, to: number): T[] {
   return next
 }
 
+/* ------------------------------ 分组列 ------------------------------ */
+
+/**
+ * 递归取出叶子列。有 `children` 的列只是表头容器，不产生单元格。
+ *
+ * 显隐 / 顺序这些状态都只能挂在叶子列上 —— 分组列本身没有 `prop`，
+ * 没法做唯一标识，也没法单独被隐藏（隐藏一个空表头没有意义）。
+ */
+export function flattenLeaves<T>(columns: ProColumn<T>[]): ProColumn<T>[] {
+  const out: ProColumn<T>[] = []
+  for (const col of columns) {
+    if (col.children?.length) out.push(...flattenLeaves(col.children))
+    else out.push(col)
+  }
+  return out
+}
+
+/** 有没有分组列。列设置面板据此决定要不要关掉拖拽（分组下没有可靠的位置语义） */
+export function hasGroupColumns<T>(columns: ProColumn<T>[]): boolean {
+  return columns.some((c) => !!c.children?.length)
+}
+
+/**
+ * 递归过滤不可见列。
+ *
+ * 分组列跟着子列走：子列全被隐藏时整组一起消失，
+ * 否则表格顶上会留一个空表头 —— 比少一列更让人困惑。
+ */
+export function filterVisibleColumns<T>(
+  columns: ProColumn<T>[],
+  isVisible: (col: ProColumn<T>) => boolean,
+): ProColumn<T>[] {
+  const out: ProColumn<T>[] = []
+  for (const col of columns) {
+    if (col.children?.length) {
+      const kids = filterVisibleColumns(col.children, isVisible)
+      if (kids.length) out.push({ ...col, children: kids })
+    } else if (isVisible(col)) {
+      out.push(col)
+    }
+  }
+  return out
+}
+
 /* ------------------------------ 固定列 ------------------------------ */
 
 /** 列的固定位置。不固定就是没这个 key */
