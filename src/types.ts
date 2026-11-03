@@ -382,6 +382,21 @@ export interface ProDrawerFormProps extends ProFormContainerProps {
 }
 
 /**
+ * 表单字段联动。
+ *
+ * 回调拿到的是**只含 `dependsOn` 里那几个字段**的对象，不是整份 model ——
+ * 依赖关系摆在明面上，也让 Vue 只跟踪这几个字段，改别处不会重算列。
+ */
+export interface ProFormDependency {
+  /** 依赖哪些字段。写在 `dependsOn` 里的值就是用回调参数的那几个 key */
+  dependsOn: string[]
+  /** 返回 false 则不渲染这一列。不渲染意味着它也不参与校验 */
+  visible?: (values: Record<string, any>) => boolean
+  /** 按当前值改写这一列的配置，浅合并（`readonly` / `fieldProps` / `valueEnum` / `label` 都可以换） */
+  resolve?: (values: Record<string, any>) => Partial<ProColumn> | void
+}
+
+/**
  * 字段组（`valueType: 'formList'`）的配置。
  *
  * 校验能用的关键在同一件事上：每项的 `el-form-item` 用**带下标的路径**（`contacts.0.name`）
@@ -557,6 +572,9 @@ export interface ProColumn<T = any> {
 
   /** `valueType: 'formList'` 时的配置 */
   formListProps?: ProFormListConfig
+
+  /** 表单里的字段联动：按其它字段的值决定显不显示、长什么样 */
+  dependency?: ProFormDependency
 
   /**
    * 可编辑表格里这一列能否编辑。

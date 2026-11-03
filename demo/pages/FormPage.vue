@@ -26,7 +26,37 @@ const formColumns: ProColumn[] = [
     valueType: 'checkbox',
     valueEnum: { front: '前端', back: '后端', ops: '运维' },
   },
-  { prop: 'budget', label: '预算', valueType: 'money', fieldProps: { min: 0, step: 1000 } },
+  {
+    prop: 'billingType',
+    label: '计费方式',
+    valueType: 'radioButton',
+    valueEnum: { fixed: '固定价', custom: '按量' },
+  },
+  {
+    prop: 'customRate',
+    label: '按量单价',
+    valueType: 'money',
+    rules: [{ required: true, message: '请输入按量单价', trigger: 'blur' }],
+    // 只有按量计费才需要填单价
+    dependency: {
+      dependsOn: ['billingType'],
+      visible: (values) => values.billingType === 'custom',
+    },
+  },
+  {
+    prop: 'budget',
+    label: '预算',
+    valueType: 'money',
+    fieldProps: { min: 0, step: 1000 },
+    // 同一列在不同计费方式下换标题、换可编辑性
+    dependency: {
+      dependsOn: ['billingType'],
+      resolve: (values) =>
+        values.billingType === 'custom'
+          ? { label: '预算封顶', readonly: true }
+          : { label: '预算（固定价）' },
+    },
+  },
   { prop: 'seatRange', label: '人数区间', valueType: 'digitRange' },
   { prop: 'sla', label: '响应时限', valueType: 'second', fieldProps: { step: 60 } },
   {
@@ -56,6 +86,7 @@ const formModel = reactive<Record<string, any>>({
   owner: 'editor',
   level: 'mid',
   tags: ['front'],
+  billingType: 'fixed',
   budget: 20000,
   seatRange: [10, 50],
   sla: 7200,

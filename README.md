@@ -273,6 +273,49 @@ tableRef.value.getData()         // 当前页数据，可用于导出
 
 ![字段组](docs/screenshots/form-list.png)
 
+#### 字段联动（dependency）
+
+一列跟着别的字段变——显不显示、标题换不换、要不要禁用、选项换一套：
+
+```ts
+{
+  prop: 'customRate',
+  label: '按量单价',
+  valueType: 'money',
+  rules: [{ required: true, message: '请输入按量单价' }],
+  dependency: {
+    dependsOn: ['billingType'],
+    visible: (values) => values.billingType === 'custom',
+  },
+},
+{
+  prop: 'budget',
+  label: '预算',
+  dependency: {
+    dependsOn: ['billingType'],
+    resolve: (values) =>
+      values.billingType === 'custom'
+        ? { label: '预算封顶', readonly: true }
+        : { label: '预算（固定价）' },
+  },
+},
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `dependsOn` | 依赖哪些字段。**回调只拿到这几个字段**，不是整份 model |
+| `visible` | 返回 `false` 就不渲染这一列 |
+| `resolve` | 返回 `Partial<ProColumn>`，浅合并到这一列上（`label` / `readonly` / `fieldProps` / `valueEnum` 都能换） |
+
+回调只看 `dependsOn` 是个刻意的限制：依赖关系摆在明面上，读 schema 时不用猜这列跟谁有关；顺带让 Vue 只跟踪这几个字段，改别处不会重算整张表单的列。写漏了就拿不到值——这是「一眼能看出来」的错，比隐式全量依赖好查。
+
+两条行为约定，别当成 bug：
+
+- **隐藏 = 不渲染，所以也不参与校验。** 藏起来的必填项不该拦住提交；反过来做（渲染但 `display:none`）会让用户被一个看不见的错误卡死。
+- **隐藏不清值。** 切走再切回来，之前填的还在，提交时也会带上。需要清空就在切换处自己处理。
+
+![字段联动](docs/screenshots/form-dependency.png)
+
 ### ElProModalForm / ElProDrawerForm
 
 ```vue
@@ -592,7 +635,8 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] **表格多级表头 + 默认插槽**（列设置里按组显隐）
 - [x] **`ElProModalForm` / `ElProDrawerForm`**（校验 → 提交 → 成功才关窗）
 - [x] **列表型字段 `formList`**（增删 / 复制 / 嵌套校验）
-- [ ] 表单分组 `group` 与字段联动 `dependency`
+- [x] **字段联动 `dependency`**（显隐 + 按值改列配置）
+- [ ] 表单分组 `group`
 - [ ] 列设置的分组拖拽（现在有分组就关掉拖拽）
 - [ ] 表格请求层补齐 `postData` / `onLoad` / `polling` / `debounceTime`
 - [ ] 表单布局变体：`StepsForm` / `QueryFilter` / `LightFilter`
@@ -645,6 +689,7 @@ src/
 │   ├── useTable.ts     # 请求生命周期：分页/排序/搜索合并 + 竞态
 │   ├── column.ts       # 列的「可设置 / 可排序」判定、顺序应用、分组展开与过滤
 │   ├── responsive.ts   # 断点订阅 + 响应式取值（colSpan / gutter / grid）
+│   ├── formDependency.ts # 表单联动：按依赖字段算显隐与列配置覆盖
 │   ├── tableCellContext.ts # 单元格渲染的 provide/inject 契约（多级表头递归要用）
 │   └── cardContext.ts  # 卡片父子关系的 provide/inject 契约
 ├── fields/

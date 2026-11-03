@@ -8,6 +8,7 @@
 import { computed, ref } from 'vue'
 import { ElButton, ElCol, ElDivider, ElForm, ElFormItem, ElRow } from 'element-plus'
 import type { FormInstance } from 'element-plus'
+import { resolveFormColumns } from '../../core/formDependency'
 import FormField from '../../fields/FormField.vue'
 import ProFormList from './ProFormList.vue'
 import type { ProColumn } from '../../types'
@@ -50,7 +51,11 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInstance>()
 
-const formColumns = computed(() => props.columns.filter((c) => !c.hideInForm))
+/**
+ * 实际渲染的列。联动也在这里算：
+ * `resolveFormColumns` 只读 `dependsOn` 里列出的字段，所以改无关字段不会触发重算。
+ */
+const formColumns = computed(() => resolveFormColumns(props.columns, props.model))
 
 const getSpan = (col: ProColumn) => col.formSpan ?? props.span
 

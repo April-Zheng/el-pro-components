@@ -51,6 +51,8 @@ export type { ColumnFixed, ColumnFixedState } from './core/column'
 export { BREAKPOINTS, BREAKPOINT_ORDER, normalizeGutter, resolveResponsive, useBreakpoint } from './core/responsive'
 export type { NormalizedGutter } from './core/responsive'
 
+export { pickDeps, resolveColumnByDependency, resolveFormColumns } from './core/formDependency'
+
 export {
   DISPLAY_ONLY_VALUE_TYPES,
   ENUM_VALUE_TYPES,
