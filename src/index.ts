@@ -2,6 +2,9 @@ import type { App, Plugin } from 'vue'
 import ElProLayout from './components/ElProLayout/ElProLayout.vue'
 import ElProDescriptions from './components/ElProDescriptions/ElProDescriptions.vue'
 import ElProForm from './components/ElProForm/ElProForm.vue'
+import ProFormGroup from './components/ElProForm/ProFormGroup.vue'
+import ElProStepsForm from './components/ElProForm/ElProStepsForm.vue'
+import ElProLightFilter from './components/ElProForm/ElProLightFilter.vue'
 import ElProModalForm from './components/ElProForm/ElProModalForm.vue'
 import ElProDrawerForm from './components/ElProForm/ElProDrawerForm.vue'
 import ElProQueryFilter from './components/ElProQueryFilter/ElProQueryFilter.vue'
@@ -25,6 +28,9 @@ export {
   ElProLayout,
   ElProDescriptions,
   ElProForm,
+  ProFormGroup,
+  ElProStepsForm,
+  ElProLightFilter,
   ElProModalForm,
   ElProDrawerForm,
   ElProTable,
@@ -86,10 +92,13 @@ const components = [
   ElProTable,
   ElProEditableTable,
   ElProQueryFilter,
+  ElProLightFilter,
   ElProPageContainer,
   ElProPageHeader,
   ElProFooterToolbar,
   ElProForm,
+  ProFormGroup,
+  ElProStepsForm,
   ElProModalForm,
   ElProDrawerForm,
   ElProDescriptions,

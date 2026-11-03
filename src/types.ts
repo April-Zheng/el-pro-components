@@ -87,6 +87,12 @@ export type ValueType =
    * 只作用于表单，没有对应的展示形态（展示请用 `cellComponent` 或 `formatter`）。
    */
   | 'formList'
+  /**
+   * 表单分组：标题栏（可折叠）+ 一块子字段区域。子字段写在 `columns` 里，
+   * **不是 `children`** —— 和源码 valueType/group 的取值一致（`children` 在表格里
+   * 是分组表头、在 formList 里是子字段，`columns` 专属 group）。只作用于表单。
+   */
+  | 'group'
 
 /** valueEnum 的单项。也可以直接写字符串（视为只有 text）。 */
 export type ValueEnumItem =
@@ -465,6 +471,104 @@ export interface ProFormListConfig {
   gutter?: number
 }
 
+/**
+ * 表单分组（`valueType: 'group'`）的容器配置，字段名与源码 ProFormGroupProps 一致。
+ *
+ * 用法也和源码一致：这些配置**通过列的 `fieldProps` 透传**给分组组件
+ * （源码里 valueType/group 就是把 `getFieldProps()` 展开到 ProFormGroup 上），
+ * 也可以写进 `groupProps` —— 两者都会生效。
+ */
+export interface ProFormGroupProps {
+  /** 分组标题。schema 模式下默认取列的 `label` */
+  title?: string
+  /** 标题旁的说明文字 */
+  tooltip?: string
+  /** 标题可点击折叠。注意：body 只在 `collapsible` 且已折叠时才隐藏 @default false */
+  collapsible?: boolean
+  /** 默认是否折叠 @default false */
+  defaultCollapsed?: boolean
+  /** 受控折叠状态，配 `v-model:collapsed` 使用 */
+  collapsed?: boolean
+  /** 子字段排列方向。`vertical` 时纵向堆叠 @default 'horizontal' */
+  direction?: 'horizontal' | 'vertical'
+  /** 子字段之间的间距 @default 32 */
+  size?: number
+  /** 交叉轴对齐方式 @default 'start' */
+  align?: 'start' | 'end' | 'center' | 'baseline'
+  /** 透传给分组容器的属性（等价源码 fieldProps 展开位） */
+  groupProps?: Omit<ProFormGroupProps, 'groupProps'>
+}
+
+/**
+ * 分步表单（ElProStepsForm）的单步定义。对应源码 SchemaForm layoutType="StepsForm"
+ * 的 `steps` 数组项（源码把每一项映射成一个 StepForm，columns 取 `columns[index]`）。
+ */
+export interface ProStepsFormItem {
+  /** 步骤标识，也作为各步取值的合并 key。默认用下标 */
+  name?: string
+  /** 步骤条标题 */
+  title?: string
+  /** 步骤条描述 */
+  description?: string
+  /** 透传给 el-step 的属性 */
+  stepProps?: Record<string, any>
+  /** 这一步的字段 schema */
+  columns: ProColumn[]
+  /** 这一步的初值（内部 model 的建值来源） */
+  initialValues?: Record<string, any>
+  /** 受控数据。传了就用这一份（和 ElProForm 的 `model` 同一约定），不传则组件内部按步各建一份 */
+  model?: Record<string, any>
+  /** 这一步的字段默认占几格，覆盖 `formProps.span` */
+  span?: number
+}
+
+/** 分步表单底部按钮的统一配置（`submitter`）。优先级低于各按钮的独立配置 */
+export interface ProStepsSubmitter {
+  /** 「下一步 / 提交」按钮的 props（loading、disabled 等） */
+  submitButtonProps?: Record<string, any>
+  /** 「上一步」按钮的 props */
+  resetButtonProps?: Record<string, any>
+  /** 点「下一步 / 提交」时先于表单提交触发 */
+  onSubmit?: () => void
+  /** 点「上一步」时触发 */
+  onReset?: () => void
+  /**
+   * 完全接管按钮区：返回 false 不渲染；返回内容（VNode/字符串）则替换默认按钮。
+   * 回调参数 `{ step, pre, submit }` —— `pre` 上一步、`submit` 触发当前步提交。
+   */
+  render?: false | ((ctx: { step: number; pre: () => void; submit: () => void }) => unknown)
+}
+
+/**
+ * 轻量筛选（ElProLightFilter）。对齐源码 form/layouts/LightFilter：
+ * - 行内紧凑字段 + 标签 chip，没有传统表单的 label 列
+ * - `secondary: true` 的字段收进「更多筛选」弹层；`collapse` 为 true 时全部收进，触发器变筛选图标
+ * - **每次值变化立即触发提交**（源码是 onValuesChange → form.submit()），对应 `search` 事件
+ * - 弹层里改的值先进草稿，点「确认」才应用并提交；「重置」把这些字段恢复到 `initialValues`
+ */
+export interface ProLightFilterProps {
+  columns: ProColumn[]
+  /** 受控数据。传了就一直用这一份，组件不会克隆它 */
+  model?: Record<string, any>
+  /** 初始值：没传 `model` 时用它建内部草稿；也是弹层「重置」要回到的基准 */
+  initialValues?: Record<string, any>
+  /** 全部字段收进弹层 @default false */
+  collapse?: boolean
+  /** 覆盖弹层触发器文案（默认「更多筛选」，`collapse` 时默认是筛选图标） */
+  collapseLabel?: string
+  /** 弹层出现位置，透传 el-popover 的 placement @default 'bottom-start' */
+  placement?: string
+  /** 弹层宽度 @default 320 */
+  popoverWidth?: number
+  /** 透传给内部 el-form 的 size */
+  size?: 'large' | 'default' | 'small'
+  disabled?: boolean
+  /** 忽略字段上的 rules（源码同名字段） @default false */
+  ignoreRules?: boolean
+  /** 透传给 el-popover 的属性 */
+  popoverProps?: Record<string, any>
+}
+
 /* -------------------------------------------------------------------------- */
 /* 页面容器                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -736,6 +840,20 @@ export interface ProColumn<T = any> {
    * - 表单里配 `valueType: 'formList'`：这是**每一项**的字段定义
    */
   children?: ProColumn<T>[]
+
+  /**
+   * 表单里配 `valueType: 'group'` 时的**分组子字段**。
+   * 源码（SchemaForm/valueType/group）取的是 `item.columns`，不是 `children`。
+   */
+  columns?: ProColumn<T>[]
+
+  /** `valueType: 'group'` 时的分组容器配置（title/collapsible/direction/size 等） */
+  groupProps?: ProFormGroupProps
+
+  /**
+   * 轻量筛选（ElProLightFilter）里这一项收进「更多筛选」弹层 @default false
+   */
+  secondary?: boolean
 
   /** `valueType: 'formList'` 时的配置 */
   formListProps?: ProFormListConfig

@@ -104,6 +104,47 @@ function onSubmit(model: Record<string, any>) {
   ElMessage.success(`表单校验通过，共 ${Object.keys(model).length} 个字段`)
   console.log('[ElProForm submit]', JSON.parse(JSON.stringify(model)))
 }
+
+/* ------------------------------ 表单分组 ------------------------------ */
+
+const groupColumns: ProColumn[] = [
+  {
+    valueType: 'group',
+    label: '基本信息',
+    groupProps: { tooltip: '这一组永远展开，标题不可折叠' },
+    columns: [
+      { prop: 'name', label: '项目名称', valueType: 'text' },
+      { prop: 'owner', label: '负责人', valueType: 'text' },
+      { prop: 'email', label: '邮箱', valueType: 'text', formSpan: 24 },
+    ],
+  },
+  {
+    valueType: 'group',
+    label: '高级设置',
+    // collapsible / defaultCollapsed 走 groupProps（等价源码从 fieldProps 透传）
+    groupProps: { collapsible: true, defaultCollapsed: true, direction: 'vertical' },
+    columns: [
+      {
+        valueType: 'group',
+        label: '通知',
+        columns: [
+          { prop: 'notify', label: '方式', valueType: 'segmented', valueEnum: { mail: '邮件', sms: '短信' } },
+          { prop: 'threshold', label: '阈值', valueType: 'number', fieldProps: { min: 0 } },
+        ],
+      },
+      { prop: 'quota', label: '配额', valueType: 'money' },
+    ],
+  },
+]
+
+const groupModel = reactive<Record<string, any>>({
+  name: '分组示例',
+  owner: '',
+  email: '',
+  notify: 'mail',
+  threshold: 100,
+  quota: 5000,
+})
 </script>
 
 <template>
@@ -114,5 +155,16 @@ function onSubmit(model: Record<string, any>) {
     </p>
 
     <ElProForm :columns="formColumns" :model="formModel" :span="8" label-width="90px" @submit="onSubmit" />
+  </div>
+
+  <div class="demo-card">
+    <h3 class="demo-section-title">表单分组（valueType: 'group'）</h3>
+    <p class="demo-section-desc">
+      子字段写在 <code>columns</code> 里（和源码一致，不是 <code>children</code>）。
+      <code>groupProps</code> 里配 <code>collapsible</code> 点标题可折叠、<code>direction: 'vertical'</code> 纵向排列；
+      分组支持嵌套（「高级设置」里的「通知」就是一层嵌套组）。
+    </p>
+
+    <ElProForm :columns="groupColumns" :model="groupModel" :span="8" label-width="90px" @submit="onSubmit" />
   </div>
 </template>

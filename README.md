@@ -103,7 +103,9 @@ type ProRequest<T> = (
 | `ElProTable` | 列配置驱动的 CRUD 表格（搜索栏 / 列设置 / 分页 / 排序 / 竞态） |
 | `ElProEditableTable` | 上面那个把「行内编辑」预置好的薄壳 |
 | `ElProQueryFilter` | 独立成块的查询筛选区（默认折叠，条件是页面自己的） |
-| `ElProForm` | 同一份 columns 生成表单 |
+| `ElProForm` | 同一份 columns 生成表单（含分组 / 字段组 / 联动） |
+| `ElProStepsForm` | 分步表单：每步校验过了才前进，最后一步统一 onFinish |
+| `ElProLightFilter` | 轻量筛选：行内紧凑字段，secondary 项收进「更多筛选」弹层 |
 | `ElProModalForm` / `ElProDrawerForm` | 同一套表单放进弹窗 / 抽屉，提交成功才关窗 |
 | `ElProDescriptions` | 同一份 columns 生成详情页 |
 | `ElProLayout` | 侧边菜单 + 面包屑外壳 |
@@ -383,6 +385,98 @@ const columns: ProColumn[] = [
 - **隐藏不清值。** 切走再切回来，之前填的还在，提交时也会带上。需要清空就在切换处自己处理。
 
 ![字段联动](docs/screenshots/form-dependency.png)
+
+#### 表单分组（group）
+
+`valueType: 'group'` 把一列变成「带标题的分组块」。**子字段写在 `columns` 里**——
+源码（SchemaForm/valueType/group）取的就是 `item.columns`，不是 `children`
+（`children` 在表格里是分组表头、在 formList 里是子字段，`columns` 专属 group）：
+
+```ts
+{
+  valueType: 'group',
+  label: '基本信息',
+  groupProps: { tooltip: '这一组永远展开' },
+  columns: [
+    { prop: 'name', label: '项目名称', valueType: 'text' },
+    { prop: 'owner', label: '负责人', valueType: 'text' },
+  ],
+}
+```
+
+容器配置对齐源码 `ProFormGroupProps`，`groupProps` 和 `fieldProps` 都收
+（源码是把 `getFieldProps()` 展开到 ProFormGroup 上，所以 `collapsible` 这些本来就走 fieldProps）：
+
+| 配置 | 说明 |
+| --- | --- |
+| `collapsible` | 标题可点击折叠。body 只在 `collapsible && 已折叠` 时隐藏，没开 collapsible 点了也不会收（源码就是这么写的） |
+| `defaultCollapsed` / `collapsed` | 默认折叠 / 受控折叠（配 `v-model:collapsed`），折叠切换会发 `collapse` 事件 |
+| `direction` / `size` / `align` | 子字段排列：横向（默认，间距 32）/ 纵向；对齐方式 |
+| `title` / `tooltip` | 标题默认取列的 `label`；`extra` 用 `#extra` 插槽放右侧操作 |
+
+分组支持嵌套（子列里再写 `valueType: 'group'` 即可），也吃顶层那套 `dependency` 联动。
+子字段布局用的是 grid（24 栅格 + `size` 做列间距），`formSpan` 照常生效——视觉上等价源码的 Space(size=32)。
+
+![表单分组](docs/screenshots/form-group.png)
+
+### ElProStepsForm
+
+```vue
+<ElProStepsForm :steps="steps" :on-finish="onFinish" :form-props="{ span: 8, labelWidth: '90px' }" />
+```
+
+```ts
+const steps: ProStepsFormItem[] = [
+  { name: 'base', title: '基本信息', columns: step1Columns },
+  { name: 'contact', title: '联系方式', columns: step2Columns },
+  { name: 'confirm', title: '确认信息', columns: step3Columns },
+]
+
+async function onFinish(values: Record<string, any>) {
+  await api.create(values)
+  return true // 返回 true → 回到第 0 步并重置各步表单（源码同款约定）
+}
+```
+
+关键语义（都对齐源码 `layouts/StepsForm`）：
+
+- **「下一步」不直接跳步**——它触发当前步表单提交，校验通过才前进，失败停在原地
+- **所有步的表单常驻挂载**（非当前步 `v-show` 隐藏），跨步填的值、状态都保留
+- 只有**最后一步**的提交触发 `onFinish`；它必须是**函数 prop**（不是事件），
+  因为「返回 true 才重置」的约定事件拿不到返回值。合并规则：后面的步覆盖前面的同名字段
+- 底部按钮：第 0 步 `[下一步]`（只有一步时直接 `[提交]`）、中间 `[上一步, 下一步]`、最后 `[上一步, 提交]`；
+  `submitter: false` 整个隐藏，`#submitter` 插槽或 `submitter.render` 可接管
+- `allowStepSelect`：允许点击步骤条直接跳步，**不触发校验**（源码同款）
+- `layout: 'vertical'` 步骤条挪到左侧，宽度按断点 xxl4/xl6/lg7/md8/sm10/xs12（源码 `stepsProps.orientation` 的等价物）
+
+实例方法：`getAllFieldsValue()`（合并所有步当前值，含没提交过的）、`setCurrentStep(i)`（不校验跳步）、
+`getCurrentStep()`、`getStepFormInstance(i)`、`resetSteps()`、`formRef`（当前步实例）。
+
+![分步表单](docs/screenshots/steps-form.png)
+
+### ElProLightFilter
+
+```vue
+<ElProLightFilter :columns="columns" :model="filterModel" @search="onSearch" />
+```
+
+行内紧凑字段（标签以 chip 形式放在控件前），没有传统表单的 label 列。行为对齐源码 `layouts/LightFilter`：
+
+- **每次值变化立即触发 `search`**（源码 onValuesChange → form.submit()），校验通过才发，失败不发
+- `secondary: true` 的字段收进「更多筛选」弹层；弹层里改的是**草稿**，点「确认」才应用并提交一次、
+  点「重置」把这些字段恢复到 `initialValues`（两个动作都是**显式提交一次**，程序化改值不算「用户改动」）
+- `collapse` 为 true 时全部字段收进弹层，触发器变筛选图标；`collapseLabel` 优先级最高
+- 任一字段有值时根节点挂 `is-effective` 类，方便给触发器上色
+- `ignoreRules` 忽略字段上的 rules（源码同名字段）；`placement` / `popoverWidth` / `popoverProps` 调弹层
+
+与源码的两处刻意差异（都不影响行为约定）：
+
+- **弹层草稿在每次打开时从当前值重建。** 源码只在挂载时初始化一次 `moreValues`，
+  「确认」时会把打开前的旧值盖回去——明显的 unintended，这里修正为打开时同步
+- **antd 的 `variant: 'borderless'`（去输入框边框、外层 chip 包边）没有移植。**
+  Element Plus 没有对应的输入形态，硬造一层样式得不偿失；字段就是普通 EP 控件 + 前置标签
+
+![轻量筛选](docs/screenshots/light-filter.png)
 
 ### ElProModalForm / ElProDrawerForm
 
@@ -821,6 +915,13 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - **有分组列时列设置不能拖拽、子列不能固定。** 顺序状态是扁平 prop 数组，装不下「换到另一个组里去」；`el-table` 也只支持顶层列固定。
 - **默认插槽插的列排在 schema 列之前。** 想往后插，就只能用 schema 里的列（操作列走 `valueType: 'option'`）。
 
+- **`ElProStepsForm` 没有移植源码的 render-props 系列。** `stepsFormRender` / `stepFormRender` / `stepsRender` / `layoutRender`
+  是 React 的 render prop，Vue 里没有一一对应的形态：按钮区自定义走 `#submitter` 插槽或 `submitter.render`，整体布局走 `layout` prop。
+  源码用 `stepsProps.orientation` 控制布局，这里换成了独立的 `layout` prop（`stepsProps` 原样透传给 el-steps，别再塞 orientation）。
+- **`ElProForm` 暴露的方法是 `reset`，不是 `resetFields`。** 外层容器（比如 StepsForm）想重置各步表单，
+  调 `reset()`；写成 `f?.resetFields?.()` 会被可选链静默吞掉——运行时不报错，重置就是不生效，
+  症状是「提交成功了表单却没清空」。可选链调用前先确认方法名真的存在。
+
 ## 踩过的坑（改这块之前先看）
 
 - **`el-table` 的 `data` 是深度响应式的。** 它内部 `const _data = ref([])`，所以插槽里拿到的 `row` 是原始行对象的 **Proxy**。
@@ -865,10 +966,10 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 - [x] **`ElProQueryFilter`**（独立筛选区，默认折叠 + 响应式栅格）
 - [x] **`ElProPageContainer` / `ElProPageHeader` / `ElProFooterToolbar`**（页面骨架，页头可吸顶）
 - [x] **真业务链路验收**（订单页：tab + 筛选 + 批量 + 弹窗 + 抽屉串成一页），顺带补 `getTotal` / `getPage` / `@loading-change`
-- [ ] 表单分组 `group`
+- [x] **表单分组 `group`**（collapsible / 嵌套 / `columns` 取子字段，对齐源码）
+- [x] **`ElProStepsForm` / `ElProLightFilter`**（分步表单 + 轻量筛选，行为对齐源码）
 - [ ] 列设置的分组拖拽（现在有分组就关掉拖拽）
 - [ ] 表格请求层补齐 `postData` / `onLoad` / `polling` / `debounceTime`
-- [ ] 表单布局变体：`StepsForm` / `LightFilter`
 - [ ] 导出当前列定义对应的 CSV
 - [ ] 行拖拽排序（`sortablejs` 可选依赖）
 

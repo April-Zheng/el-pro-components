@@ -11,6 +11,7 @@ import type { FormInstance } from 'element-plus'
 import { resolveFormColumns } from '../../core/formDependency'
 import FormField from '../../fields/FormField.vue'
 import ProFormList from './ProFormList.vue'
+import ProFormGroup from './ProFormGroup.vue'
 import type { ProColumn } from '../../types'
 
 defineOptions({ name: 'ElProForm' })
@@ -109,6 +110,21 @@ defineExpose({
       <template v-for="col in formColumns" :key="col.prop ?? col.label">
         <ElCol v-if="col.valueType === 'divider'" :span="24">
           <ElDivider content-position="left" class="el-pro-form__divider">{{ col.label }}</ElDivider>
+        </ElCol>
+
+        <!--
+          表单分组：子字段来自 `columns`（源码 valueType/group 取 item.columns，不是 children）。
+          容器配置走 groupProps + fieldProps —— 源码就是把 getFieldProps() 展开到 ProFormGroup 上，
+          所以 collapsible / direction / size / onCollapse 这些都从 fieldProps 进来。
+        -->
+        <ElCol v-else-if="col.valueType === 'group'" :span="col.formSpan ?? 24">
+          <ProFormGroup
+            :label="col.label"
+            :columns="col.columns ?? []"
+            :model="model"
+            :span="span"
+            v-bind="{ ...col.groupProps, ...col.fieldProps }"
+          />
         </ElCol>
 
         <!--
