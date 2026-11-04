@@ -12,7 +12,7 @@
  * - 行拖拽排序：那是业务态（改 sort 字段），和列顺序不是一回事，交给 sortablejs
  * - 受控数据模式（value/onChange，不配 request）：本库定位是「配 request 的 CRUD 页」
  */
-import { computed, nextTick, onBeforeUnmount, provide, reactive, ref, toRef, useAttrs, useSlots, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, toRaw, toRef, useAttrs, useSlots, watch } from 'vue'
 import type { Slots } from 'vue'
 import { ElButton, ElMessage, ElPagination, ElTable, ElTableColumn } from 'element-plus'
 import Schema from 'async-validator'
@@ -338,7 +338,8 @@ const tableSpanMethod = computed(() => {
   return ({ row, column }: any) => {
     const fi = fields.indexOf(String(column?.property ?? ''))
     if (fi < 0) return
-    const rowIndex = rows.indexOf(row)
+    // el-table 内部把行包成 reactive 代理，必须 toRaw 回原始对象才能和 data 按身份比对
+    const rowIndex = rows.indexOf(toRaw(row))
     if (rowIndex < 0) return
     const span = spans[fi][rowIndex]
     return { rowspan: span, colspan: span === 0 ? 0 : 1 }
@@ -455,6 +456,9 @@ watch(
   () => nextTick(initSortable),
   { flush: 'post' },
 )
+// 受控数据模式下 data 在 useTable 的 immediate watch 里就已赋值（早于上面的 watch 注册），
+// 不补 onMounted 的话拖拽在首屏永远初始化不上
+onMounted(initSortable)
 onBeforeUnmount(destroySortable)
 
 /* ------------------------------ 工具栏关键字搜索 ------------------------------ */
