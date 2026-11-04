@@ -45,12 +45,16 @@ interface FormContainerEvents {
  * 用 structuredClone 而不是 `{...}`：像日期区间这种字段是数组，
  * 浅拷贝会让草稿和原行共享同一个数组，在草稿里改完取消，原行也跟着变了。
  * structuredClone 遇到函数、DOM 节点会抛错，这时退回浅拷贝——总比崩了好。
+ * 注意必须先 `toRaw`：Vue 的响应式代理直接丢给 structuredClone 会抛 DataCloneError，
+ * 而业务传进来的 initialValues 恰恰十有八九是 reactive 的。
  */
+import { toRaw } from 'vue'
+
 function cloneSeed<T>(source: T): T {
   if (source === null || typeof source !== 'object') return source
   if (typeof structuredClone === 'function') {
     try {
-      return structuredClone(source)
+      return structuredClone(toRaw(source))
     } catch {
       /* 含不可克隆的值，退回浅拷贝 */
     }
@@ -102,8 +106,17 @@ export function useFormContainer(props: ProFormContainerProps, events: FormConta
     if (isOpen.value) setOpen(false)
   }
 
-  /** 遮罩 / ESC / 右上角关闭都从这里进来，走同一套开关逻辑 */
+  /** trigger 点击切换开关（对齐 React：setOpen(!open)） */
+  function toggleDialog() {
+    if (isOpen.value) closeDialog()
+    else openDialog()
+  }
+
+  /** 遮罩 / ESC / 右上角关闭都从这里进来，走同一套开关逻辑。
+   * 提交中不允许关：请求还在飞就关窗，用户会以为失败了再点一次提交。
+   * 取消按钮（onCancel）不经这里，与 React 的 loading 阻断范围一致 */
   function onVisibleChange(value: boolean) {
+    if (!value && submitting.value) return
     setOpen(value)
   }
 
@@ -142,6 +155,7 @@ export function useFormContainer(props: ProFormContainerProps, events: FormConta
     draft,
     openDialog,
     closeDialog,
+    toggleDialog,
     onVisibleChange,
     onCancel,
     handleSubmit,

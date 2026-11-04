@@ -102,7 +102,11 @@ function reset() {
 }
 
 function search() {
-  emit('search', snapshot(formModel.value))
+  // 校验门禁：与 ElProLightFilter 一致，规则不过就不发 search（React 走 form.submit 同语义）
+  formRef.value
+    ?.validate()
+    .then(() => emit('search', snapshot(formModel.value)))
+    .catch(() => {})
 }
 
 /* ------------------------------ 折叠状态 ------------------------------- */

@@ -53,7 +53,7 @@ const props = withDefaults(
       fullscreen?: boolean
     } | false
     /** 是否显示多选列 */
-    selection?: boolean
+    selection?: boolean | { /** 跨页保留选中（默认开，前提是 rowKey 稳定） */ reserveSelection?: boolean }
     /** 分页配置，传 false 关闭 */
     pagination?: false | { pageSizes?: number[]; layout?: string }
     defaultPageSize?: number
@@ -167,6 +167,20 @@ watch(
   { deep: true },
 )
 
+/** persistenceKey 运行时变更：重读新 key 的存储（对齐 React Store 的监听协议） */
+watch(
+  () => props.persistenceKey,
+  () => {
+    columnState.value = readJSON<Record<string, boolean>>(STORAGE_PREFIX, {})
+    columnOrder.value = props.columnOrder.length
+      ? [...props.columnOrder]
+      : readJSON<string[]>(ORDER_STORAGE_PREFIX, [])
+    columnFixed.value = Object.keys(props.columnFixed).length
+      ? { ...props.columnFixed }
+      : readJSON<ColumnFixedState>(FIXED_STORAGE_PREFIX, {})
+  },
+)
+
 /** 用户拖出来的列顺序。空数组 = 用 columns 的原始顺序 */
 const columnOrder = ref<string[]>(
   props.columnOrder.length ? [...props.columnOrder] : readJSON<string[]>(ORDER_STORAGE_PREFIX, []),
@@ -210,6 +224,12 @@ watch(
 
 const tableSize = ref<TableSize>(props.size)
 const fullscreen = ref(false)
+
+/** 跨页保留选中：默认开（前提 rowKey 稳定）；selection.reserveSelection === false 显式关闭 */
+const selectionReserve = computed(() => {
+  if (typeof props.selection === 'object' && props.selection.reserveSelection === false) return false
+  return !!props.rowKey
+})
 
 /* ------------------------------ 数据 ------------------------------ */
 
@@ -426,7 +446,6 @@ async function removeRow(row: any) {
   delete drafts[String(key)]
   // 同样不能靠引用比较：插槽传来的是 Proxy
   data.value = data.value.filter((r) => String(keyOf(r)) !== String(key))
-  total.value = Math.max(0, total.value - 1)
   setEditingKeys(editingKeys.value.filter((k) => String(k) !== String(key)))
   emit('change', data.value)
 }
@@ -448,7 +467,7 @@ async function addRow() {
   // 先把临时 key 打到对象上，之后无论是原始对象还是 el-table 的 Proxy 都能取到同一个 key
   stampTmpKey(row)
   data.value = [row, ...data.value]
-  total.value += 1
+  // 不动 total：total 是服务端分页口径，本地插行改变它会造成翻页错位（对齐 React）
   emit('change', data.value)
 
   /**
@@ -752,7 +771,12 @@ defineExpose({
         @sort-change="table.handleSortChange"
         @selection-change="handleSelectionChange"
       >
-        <ElTableColumn v-if="selection" type="selection" width="46" :reserve-selection="!!rowKey" />
+        <ElTableColumn
+          v-if="selection"
+          type="selection"
+          width="46"
+          :reserve-selection="selectionReserve"
+        />
 
         <!--
           默认插槽：插任意 el-table-column（展开行、自定义前置列）。

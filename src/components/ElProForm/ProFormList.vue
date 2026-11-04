@@ -8,7 +8,7 @@
  * 代价是**下标会随增删漂移**，所以 v-for 的 key 必须换成稳定的符号键，
  * 否则删掉第 1 项后，剩下几项的输入框会跟错行。
  */
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, toRaw, watch } from 'vue'
 import { ElButton, ElCol, ElFormItem, ElRow } from 'element-plus'
 import FormField from '../../fields/FormField.vue'
 import type { ProColumn, ProFormListConfig } from '../../types'
@@ -101,7 +101,8 @@ function copy(index: number) {
   const source = list.value[index]
   let cloned: ListRow
   try {
-    cloned = structuredClone(source)
+    // toRaw：响应式代理直接 structuredClone 会抛 DataCloneError，退浅拷贝会污染源行
+    cloned = structuredClone(toRaw(source))
   } catch {
     cloned = { ...source }
   }

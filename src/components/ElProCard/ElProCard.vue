@@ -296,11 +296,10 @@ defineExpose({ toggleCollapsed, setCollapsed })
 
 <template>
   <div class="el-pro-card" :class="rootClass" :style="rootStyle" @click="onRootClick">
-    <!-- 封面 -->
-    <div v-if="cover && !collapsed" class="el-pro-card__cover">
-      <slot name="cover">
-        <component :is="asRenderable(cover)" />
-      </slot>
+    <!-- 封面：插槽单独给也要能渲染 -->
+    <div v-if="!collapsed && (cover || $slots.cover)" class="el-pro-card__cover">
+      <slot v-if="$slots.cover" name="cover" />
+      <component v-else :is="asRenderable(cover)" />
     </div>
 
     <!-- 头部 -->

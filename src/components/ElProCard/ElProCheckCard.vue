@@ -114,10 +114,13 @@ function handleClick() {
       </div>
     </div>
 
-    <div v-if="extra !== undefined" class="el-pro-check-card__extra">
-      <slot name="extra" />
-      <component :is="extra" v-if="typeof extra !== 'string'" />
-      <span v-else>{{ extra }}</span>
+    <div v-if="extra !== undefined || $slots.extra" class="el-pro-check-card__extra">
+      <!-- 插槽优先：prop 与插槽同时给时不双重渲染 -->
+      <slot v-if="$slots.extra" name="extra" />
+      <template v-else>
+        <component :is="extra" v-if="typeof extra !== 'string'" />
+        <span v-else>{{ extra }}</span>
+      </template>
     </div>
 
     <!-- 选中角标：用 CSS 画，避免引图标库 -->

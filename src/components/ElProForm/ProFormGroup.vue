@@ -11,7 +11,7 @@
  *   （源码在 style 里显式置 0；行距交给 el-form-item 自带的 margin-bottom）
  * - 子字段来自 schema 的 `columns`（源码 valueType/group 的 genItems(item.columns)）
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { CSSProperties } from 'vue'
 import { ElDivider, ElFormItem, ElTooltip } from 'element-plus'
 import { resolveFormColumns } from '../../core/formDependency'
@@ -60,12 +60,25 @@ const displayTitle = computed(() => props.title ?? props.label)
 
 /* ------------------------------ 折叠状态 ------------------------------- */
 
-const innerCollapsed = ref(props.defaultCollapsed)
-const isCollapsed = computed(() => props.collapsed ?? innerCollapsed.value)
+/**
+ * 内部状态自己翻转，props.collapsed 变化时同步进来。
+ * 不能写成 `props.collapsed ?? inner` 的纯受控遮蔽——schema 模式里 fieldProps 传的是
+ * 静态 `collapsed: true`，那样点击永远翻不动。
+ * 注意：与 React 的 useControlledState 不同（那边是纯受控遮蔽），这里是有意偏离：
+ * 传了 collapsed 但父组件不监听 update:collapsed 时，点击仍会视觉翻转。
+ */
+const isCollapsed = ref(props.collapsed ?? props.defaultCollapsed ?? false)
+
+watch(
+  () => props.collapsed,
+  (v) => {
+    if (v !== undefined) isCollapsed.value = v
+  },
+)
 
 function toggle() {
   const next = !isCollapsed.value
-  innerCollapsed.value = next
+  isCollapsed.value = next
   emit('update:collapsed', next)
   emit('collapse', next)
 }

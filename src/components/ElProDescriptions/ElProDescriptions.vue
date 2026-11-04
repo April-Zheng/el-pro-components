@@ -120,8 +120,11 @@ onBeforeUnmount(() => controller?.abort())
 
 /* ------------------------------ 渲染 ------------------------------ */
 
+// index/indexBorder 是序号列，在单条详情里只会渲染出无意义的 "1"，与 React 一致地过滤掉
 const visibleColumns = computed(() =>
-  props.columns.filter((c) => !c.hideInDescriptions && c.prop),
+  props.columns.filter(
+    (c) => !c.hideInDescriptions && c.prop && c.valueType !== 'index' && c.valueType !== 'indexBorder',
+  ),
 )
 
 /** el-descriptions 只认数字，响应式配置在组件内解析成当前断点的值 */

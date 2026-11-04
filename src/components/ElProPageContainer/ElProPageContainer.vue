@@ -208,13 +208,15 @@ function onTabChange(key: string | number) {
 const layoutCtx = inject(PRO_LAYOUT, null)
 
 /**
- * 吸顶偏移。优先级：显式 affixProps.offset > 布局顶栏高度 > 0。
+ * 吸顶偏移。优先级：显式 affixProps.offset > 布局顶栏高度 > 1。
  *
  * 中间这一档是关键：页面不该知道「顶栏 56px」这种数字，
  * 也不该为了吸顶不被顶栏盖住而被迫传参 —— 那是布局的职责。
+ * 末档用 1 而不是 0：无布局时 affix 在文档流滚动里 offset=0 与 sticky 边界
+ * 重叠会抖动，React 侧同位置也是 1（PageContainer/index.tsx:441-442）。
  */
 const affixOffset = computed(() =>
-  Number(props.affixProps?.offset ?? layoutCtx?.headerHeight ?? 0),
+  Number(props.affixProps?.offset ?? layoutCtx?.headerHeight ?? 1),
 )
 
 /** 只有「顶栏布局 + 固定宽度」才收窄，和源码一致 */

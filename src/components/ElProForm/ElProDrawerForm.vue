@@ -47,7 +47,7 @@ const container = useFormContainer(props, {
   onFinishError: (error) => emit('finishError', error),
 })
 
-const { formRef, submitting, isOpen, formModel, openDialog, onCancel, onVisibleChange, handleSubmit } =
+const { formRef, submitting, isOpen, formModel, openDialog, toggleDialog, onCancel, onVisibleChange, handleSubmit } =
   container
 
 defineExpose({
@@ -60,8 +60,8 @@ defineExpose({
 </script>
 
 <template>
-  <span v-if="$slots.trigger" class="el-pro-drawer-form__trigger" @click="openDialog">
-    <slot name="trigger" :open="openDialog" />
+  <span v-if="$slots.trigger" class="el-pro-drawer-form__trigger" @click="toggleDialog">
+    <slot name="trigger" />
   </span>
 
   <ElDrawer
