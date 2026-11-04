@@ -24,6 +24,7 @@ export const menus: ProLayoutMenuItem[] = [
   { title: '指标卡', path: '/statistic' },
   { title: '列表示例', path: '/list' },
   { title: '行内编辑', path: '/editable' },
+  { title: '数据生命周期', path: '/data-mode' },
   {
     title: '分组菜单',
     children: [
