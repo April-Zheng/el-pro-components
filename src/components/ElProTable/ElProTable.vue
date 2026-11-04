@@ -258,22 +258,6 @@ const paginationControlled = computed(
     (props.pagination.current !== undefined || props.pagination.pageSize !== undefined),
 )
 
-/** 受控分页：外部值变化同步进来（触发重新请求）。immediate 与 defaultCurrent/defaultPageSize 配合，挂载时不产生多余请求 */
-watch(
-  () =>
-    typeof props.pagination === 'object'
-      ? ([props.pagination.current, props.pagination.pageSize] as const)
-      : ([undefined, undefined] as const),
-  ([c, s]) => {
-    if (!paginationControlled.value) return
-    const patch: { current?: number; pageSize?: number } = {}
-    if (c !== undefined && c !== table.current.value) patch.current = c
-    if (s !== undefined && s !== table.pageSize.value) patch.pageSize = s
-    if (Object.keys(patch).length) void table.action.setPage(patch)
-  },
-  { immediate: true },
-)
-
 /** 翻页：受控时交还外部（v-model:pagination），非受控直接走内部 */
 function onPageChange(page: number) {
   if (paginationControlled.value && typeof props.pagination === 'object') {
@@ -323,6 +307,22 @@ watch(table.pageSize, (s) => {
   if (!paginationControlled.value || typeof props.pagination !== 'object') return
   if (s !== props.pagination.pageSize) emit('update:pagination', { ...props.pagination, pageSize: s })
 })
+
+/** 受控分页：外部值变化同步进来（触发重新请求）。immediate 与 defaultCurrent/defaultPageSize 配合，挂载时不产生多余请求 */
+watch(
+  () =>
+    typeof props.pagination === 'object'
+      ? ([props.pagination.current, props.pagination.pageSize] as const)
+      : ([undefined, undefined] as const),
+  ([c, s]) => {
+    if (!paginationControlled.value) return
+    const patch: { current?: number; pageSize?: number } = {}
+    if (c !== undefined && c !== table.current.value) patch.current = c
+    if (s !== undefined && s !== table.pageSize.value) patch.pageSize = s
+    if (Object.keys(patch).length) void table.action.setPage(patch)
+  },
+  { immediate: true },
+)
 
 const showSearch = computed(() => props.search && searchColumns.value.length > 0)
 

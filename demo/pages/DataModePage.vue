@@ -5,7 +5,7 @@
  * 每块都挂了请求计数器——「假分页翻页不发请求」「游标翻页带 nextToken」
  * 这些行为光看表格看不出来，看计数器才知道请求到底发没发。
  */
-import { computed, reactive, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ElAlert, ElMessage, ElTag } from 'element-plus'
 import { ElProEditableTable, ElProTable } from '@/index'
 import type { ProColumn, ProRequest, ProRequestResult } from '@/index'
@@ -34,9 +34,11 @@ function makeRows(from: number, count: number): Row[] {
 /* ------------------------------ 1. 轮询 ------------------------------ */
 
 let pollSeq = 0
+const pollSeqText = ref(0)
 const requestPolling: ProRequest<Row> = async () => {
   await delay(200)
   pollSeq += 1
+  pollSeqText.value = pollSeq
   return { data: makeRows(pollSeq * 10, 3), total: pollSeq * 10 + 3 }
 }
 
@@ -90,7 +92,8 @@ const cursorColumns: ProColumn<Row>[] = [
 
 /* --------------------------- 5. 受控分页 --------------------------- */
 
-const controlledPagination = reactive({ current: 2, pageSize: 10 })
+/** 受控分页的值用 ref 持有：v-model 回写是整体赋值，const reactive 会抛 Assignment to constant */
+const controlledPagination = ref({ current: 2, pageSize: 10 })
 const controlledHits = ref(0)
 const requestControlled: ProRequest<Row> = async (params) => {
   await delay(300)
@@ -102,7 +105,7 @@ const requestControlled: ProRequest<Row> = async (params) => {
 }
 
 function jumpToFirst() {
-  controlledPagination.current = 1
+  controlledPagination.value = { ...controlledPagination.value, current: 1 }
 }
 
 /* --------------------------- 6. 受控数据 --------------------------- */
@@ -137,7 +140,7 @@ const dataSourceJson = computed(() => JSON.stringify(dataSource.value))
     <section>
       <h4>1. 轮询 polling（每 2 秒一次，每次数据 ID 段变化可见）</h4>
       <p class="hint">
-        请求计数：{{ pollSeq }} 次。
+        请求计数：{{ pollSeqText }} 次。
         <ElTag v-if="pollingHint" type="warning" size="small">轮询中</ElTag>
         <ElTag v-else type="info" size="small">空闲</ElTag>
       </p>
@@ -208,18 +211,10 @@ const dataSourceJson = computed(() => JSON.stringify(dataSource.value))
 
     <!-- 6. 受控数据 -->
     <section>
-      <h4>6. 受控数据模式（dataSource + v-model:data-source，不发请求）</h4>
-      <p class="hint">不发请求；增删改经 update:data-source 交还外部。当前外部数据：{{ dataSourceJson }}</p>
-      <ElProEditableTable
-        v-model:data-source="dataSource"
-        :columns="controlledColumns"
-        editable
-        :search="false"
-        :pagination="false"
-        row-key="id"
-        @change="() => ElMessage.success('数据已同步到外部 dataSource')"
-      />
+      <h4>6. 受控数据</h4>
+      <ElProEditableTable v-model:data-source="dataSource" :columns="controlledColumns" editable :search="false" :pagination="false" row-key="id" />
     </section>
+    -->
   </div>
 </template>
 
