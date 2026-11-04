@@ -11,14 +11,14 @@
  * - 操作列用 `offset` 贴到最后一行的右边，不是用 flex 推（推过去换行就不听话）
  * - 折叠掉的项**不渲染**，所以它们的校验规则也不参与（查询区一般也没规则）
  */
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElButton, ElCol, ElForm, ElFormItem, ElRow } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { resolveSearchColumn } from '../../core/column'
 import { computeQueryFilterLayout, resolveShowLength } from '../../core/queryFilter'
-import { resolveResponsive, useBreakpoint } from '../../core/responsive'
+import { BREAKPOINTS, BREAKPOINT_ORDER, resolveResponsive } from '../../core/responsive'
 import FormField from '../../fields/FormField.vue'
-import type { ProQueryFilterProps } from '../../types'
+import type { Breakpoint, ProQueryFilterProps } from '../../types'
 
 defineOptions({ name: 'ElProQueryFilter' })
 
@@ -46,7 +46,30 @@ const emit = defineEmits<{
 }>()
 
 const formRef = ref<FormInstance>()
-const breakpoint = useBreakpoint()
+
+/**
+ * 断点按**容器宽度**算，不按视口。
+ * QueryFilter 常和别的组件并排（左树右筛选），视口宽不代表自己宽；
+ * React 侧用 RcResizeObserver 量容器，这里用 ResizeObserver 同语义。
+ */
+const breakpoint = ref<Breakpoint>('xl')
+let resizeObserver: ResizeObserver | undefined
+onMounted(() => {
+  const el = (formRef.value?.$el) as HTMLElement | undefined
+  if (!el || typeof ResizeObserver === 'undefined') return
+  const measure = () => {
+    const w = el.clientWidth
+    let matched: Breakpoint = 'xs'
+    for (const bp of BREAKPOINT_ORDER) {
+      if (w >= BREAKPOINTS[bp]) matched = bp
+    }
+    breakpoint.value = matched
+  }
+  measure()
+  resizeObserver = new ResizeObserver(measure)
+  resizeObserver.observe(el)
+})
+onBeforeUnmount(() => resizeObserver?.disconnect())
 
 /* ------------------------------ 数据归属 ------------------------------- */
 

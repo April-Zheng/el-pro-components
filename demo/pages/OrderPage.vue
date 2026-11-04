@@ -274,8 +274,9 @@ async function onSubmit(values: Record<string, any>) {
   else await createOrder(values)
   ElMessage.success(editingId.value ? '已保存' : '已创建')
   void tableRef.value?.reload()
-  // 不要自己写 formOpen = false：弹窗在 onFinish resolve 之后自己会关，
-  // 手动关会让「提交中 → 关闭」的顺序颠倒，看起来像没等请求就关了
+  // 返回 true 才关窗（对齐 React）：返回 false 可留在窗内做二次确认；
+  // 不要自己写 formOpen = false，手动关会让「提交中 → 关闭」的顺序颠倒
+  return true
 }
 
 /* --------------------------------- 详情 --------------------------------- */

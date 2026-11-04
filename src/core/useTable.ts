@@ -119,6 +119,14 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
     try {
       const res = await req(payload, { ...sort.value }, { signal: myController.signal })
       if (mySeq !== seq) return
+
+      // 业务层失败：进空态、不报错（与 ProRequestResult.success 的文档承诺一致）
+      if (!Array.isArray(res) && res?.success === false) {
+        data.value = []
+        total.value = 0
+        return
+      }
+
       const list = (Array.isArray(res) ? res : (res?.data ?? [])) as T[]
       data.value = list
       total.value = Array.isArray(res) ? list.length : (res?.total ?? list.length)
@@ -130,8 +138,7 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
         error?.name === 'CanceledError' ||
         error?.code === 'ERR_CANCELED'
       if (aborted) return
-      data.value = []
-      total.value = 0
+      // 请求失败保留旧数据，只上报错误——弱网/轮询场景下不该把已有数据闪空
       options.onError?.(error instanceof Error ? error : new Error(String(error)))
     } finally {
       if (mySeq === seq) loading.value = false

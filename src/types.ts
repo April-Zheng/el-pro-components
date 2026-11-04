@@ -37,6 +37,7 @@ export type ValueType =
   | 'textarea'
   | 'password'
   | 'code'
+  | 'jsonCode'
   /* 数值 */
   | 'number'
   /** 数字区间，值是 `[最小值, 最大值]` */
@@ -320,8 +321,8 @@ export type ProDescriptionsRequest<T = Record<string, any>> = (
 /* 表单容器                                                                    */
 /* -------------------------------------------------------------------------- */
 
-/** 提交钩子的返回值。返回 Promise 时会等它 resolve 才关窗，reject 则保持打开 */
-export type ProFormFinish = (values: Record<string, any>) => void | Promise<void>
+/** 提交钩子的返回值。返回真值（或 resolve 为真值）才关窗，返回 false / reject 则保持打开；对齐 React 版与 ElProStepsForm */
+export type ProFormFinish = (values: Record<string, any>) => boolean | void | Promise<boolean | void>
 
 /**
  * 弹窗表单 / 抽屉表单的公共契约。
@@ -798,6 +799,8 @@ export interface ProColumn<T = any> {
   valueFormat?: string
   /** 单元格内容可一键复制 */
   copyable?: boolean
+  /** 文本溢出时悬浮显示全文（tooltip）。默认关；表格列也可用 EP 原生 showOverflowTooltip */
+  ellipsis?: boolean
 
   /** 是否出现在搜索栏：false 隐藏 / true 用默认 / 对象可细调 */
   search?: boolean | ProSearchConfig

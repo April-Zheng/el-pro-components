@@ -30,3 +30,4 @@ Thumbs.db
 .cache/
 .eslintcache
 node_modules/.vite
+/.scratch

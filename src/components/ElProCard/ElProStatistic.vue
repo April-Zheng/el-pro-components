@@ -16,7 +16,7 @@
  * 趋势配色是**红涨绿跌**（中国金融语义，源码注释里也是这么写的）。
  * 想反过来，覆盖 `--el-pro-statistic-trend-up-color` / `-down-color` 即可。
  */
-import { computed } from 'vue'
+import { computed, type CSSProperties } from 'vue'
 import { ElTooltip } from 'element-plus'
 import type { ProStatisticLayout, ProStatisticStatus, ProStatisticTrend } from '../../types'
 
@@ -44,6 +44,8 @@ const props = withDefaults(
     groupSeparator?: string
     decimalSeparator?: string
     loading?: boolean
+    /** 只作用于数值本身的内联样式（不含标题/描述），对齐 antd Statistic 的 valueStyle */
+    valueStyle?: CSSProperties
   }>(),
   {
     layout: 'vertical',
@@ -120,7 +122,7 @@ const rootClass = computed(() => [
             </ElTooltip>
           </div>
 
-          <div class="el-pro-statistic__value">
+          <div class="el-pro-statistic__value" :style="valueStyle">
             <span v-if="loading" class="el-pro-statistic__skeleton" />
             <template v-else>
               <span v-if="trend" class="el-pro-statistic__trend" aria-hidden="true" />

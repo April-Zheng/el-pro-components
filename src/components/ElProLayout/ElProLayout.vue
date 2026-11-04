@@ -12,9 +12,10 @@
  * 用 sticky 而不是「内容区内部滚动」的理由：内部滚动会让 el-affix 的坐标系
  * 变成那个滚动容器，页面里所有吸顶都得跟着改 offset；文档流滚动则各处零改动。
  */
-import { computed, provide, ref } from 'vue'
+import { computed, provide, ref, watch } from 'vue'
 import { ElBreadcrumb, ElBreadcrumbItem, ElMenu, ElScrollbar } from 'element-plus'
 import { PRO_LAYOUT, PRO_LAYOUT_HEADER_HEIGHT } from '../../core/layoutContext'
+import { BREAKPOINT_ORDER, useBreakpoint } from '../../core/responsive'
 import type { ProLayoutMenuItem } from '../../types'
 import MenuItem from './MenuItem.vue'
 
@@ -30,6 +31,8 @@ const props = withDefaults(
     router?: boolean
     /** 初始是否折叠 */
     defaultCollapsed?: boolean
+    /** 受控折叠。传了就以它为准，折叠变化通过 `update:collapsed` 同步 */
+    collapsed?: boolean
     siderWidth?: number
     collapsedWidth?: number
     /** 隐藏侧边栏 */
@@ -46,9 +49,36 @@ const props = withDefaults(
   },
 )
 
-const emit = defineEmits<{ select: [string] }>()
+const emit = defineEmits<{
+  select: [string]
+  'update:collapsed': [boolean]
+  collapsedChange: [boolean]
+}>()
 
-const collapsed = ref(props.defaultCollapsed)
+const innerCollapsed = ref(props.defaultCollapsed)
+/** 受控/非受控双轨：传了 `collapsed` 就以它为准 */
+const collapsed = computed(() => props.collapsed ?? innerCollapsed.value)
+
+function setCollapsed(value: boolean) {
+  innerCollapsed.value = value
+  emit('update:collapsed', value)
+  emit('collapsedChange', value)
+}
+
+const breakpoint = useBreakpoint()
+/**
+ * 窄屏自动收起（对齐 React：md 及以下折叠）。
+ * 只在断点变化时推一次，之后用户仍可手动展开，直到下次断点变化。
+ */
+watch(
+  breakpoint,
+  (bp) => {
+    if (BREAKPOINT_ORDER.indexOf(bp) <= BREAKPOINT_ORDER.indexOf('md')) {
+      setCollapsed(true)
+    }
+  },
+  { immediate: true },
+)
 
 const visibleMenus = computed(() => props.menus.filter((m) => !m.hideInMenu))
 
@@ -110,8 +140,17 @@ const layoutStyle = computed(() => ({
   '--el-pro-layout-header-height': `${PRO_LAYOUT_HEADER_HEIGHT}px`,
 }))
 
-/** 页面层（ElProPageContainer）靠这个知道吸顶要往下让多少 */
-provide(PRO_LAYOUT, { headerHeight: PRO_LAYOUT_HEADER_HEIGHT })
+/** 页面层（ElProPageContainer）靠这个知道吸顶要往下让多少；siderWidth 供固定条避让 */
+provide(PRO_LAYOUT, {
+  headerHeight: PRO_LAYOUT_HEADER_HEIGHT,
+  siderWidth: () => (props.hideSider ? 0 : collapsed.value ? props.collapsedWidth : props.siderWidth),
+})
+
+defineExpose({
+  setCollapsed,
+  toggleCollapsed: () => setCollapsed(!collapsed.value),
+  isCollapsed: () => collapsed.value,
+})
 </script>
 
 <template>
@@ -150,7 +189,7 @@ provide(PRO_LAYOUT, { headerHeight: PRO_LAYOUT_HEADER_HEIGHT })
             type="button"
             class="el-pro-layout__collapse"
             :title="collapsed ? '展开菜单' : '收起菜单'"
-            @click="collapsed = !collapsed"
+            @click="setCollapsed(!collapsed)"
           >
             <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke-linecap="round" />

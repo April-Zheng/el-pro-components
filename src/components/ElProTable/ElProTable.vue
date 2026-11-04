@@ -14,7 +14,8 @@
  */
 import { computed, onBeforeUnmount, provide, reactive, ref, toRef, useAttrs, useSlots, watch } from 'vue'
 import type { Slots } from 'vue'
-import { ElButton, ElPagination, ElTable, ElTableColumn } from 'element-plus'
+import { ElButton, ElMessage, ElPagination, ElTable, ElTableColumn } from 'element-plus'
+import Schema from 'async-validator'
 import { useTable } from '../../core/useTable'
 import {
   applyColumnOrder,
@@ -325,6 +326,28 @@ function isEditCell(row: any, col: ProColumn, index: number) {
 }
 
 /**
+ * 保存前按列上的 `rules` 校验草稿（对齐 React：保存前 validateFields 拦截）。
+ * 编辑单元格是裸 FormField，没有 el-form-item 接收红字，所以错误统一用 ElMessage 提示；
+ * 规则语义与 el-form 完全一致（同一套 async-validator）。
+ */
+async function validateDraft(row: any, draft: Record<string, any>, index: number): Promise<boolean> {
+  for (const col of props.columns) {
+    if (!col.prop || !col.rules?.length) continue
+    // 行按 key 定位不到时（外部直喂的无 id 行）index 会是 -1，
+    // 夹到 0 再传给 editable 回调，避免用户函数拿到 -1 误判
+    if (!canEditCell(row, col, Math.max(index, 0))) continue
+    try {
+      const validator = new Schema({ [col.prop]: col.rules })
+      await validator.validate({ [col.prop]: draft[col.prop] })
+    } catch (error: any) {
+      ElMessage.error(error?.errors?.[0]?.message ?? `${col.label || col.prop} 未通过校验`)
+      return false
+    }
+  }
+  return true
+}
+
+/**
  * 保存一行。返回 false 表示没存成功（校验失败 / 接口报错），
  * 此时**不退出编辑态、不写回数据**，让用户能改完再存。
  */
@@ -335,6 +358,7 @@ async function saveRow(row: any): Promise<boolean> {
 
   // 插槽里的 row 可能是 Proxy，indexOf 比不到；统一按 key 定位
   const index = data.value.findIndex((r) => String(keyOf(r)) === String(key))
+  if (!(await validateDraft(row, draft, index))) return false
   savingKey.value = key
   try {
     const res = await editableConfig.value?.onSave?.(key, { ...draft }, index)

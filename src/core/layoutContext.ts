@@ -21,6 +21,11 @@ import type { InjectionKey } from 'vue'
 export interface ProLayoutContext {
   /** 布局顶栏高度（px）。吸顶元素要钉在它下面 */
   headerHeight: number
+  /**
+   * 当前生效的侧栏宽度（px），随折叠/隐藏变化。
+   * 固定条（FooterToolbar）避让侧栏用；没在布局内时取不到，自行回落 0
+   */
+  siderWidth: () => number
 }
 
 export const PRO_LAYOUT: InjectionKey<ProLayoutContext> = Symbol('elProLayout')

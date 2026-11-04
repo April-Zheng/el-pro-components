@@ -124,8 +124,9 @@ export function useFormContainer(props: ProFormContainerProps, events: FormConta
 
     submitting.value = true
     try {
-      await props.onFinish?.(formModel.value)
-      closeDialog()
+      // 真值才关窗（对齐 React 与 ElProStepsForm）：返回 false 可留在窗内做二次确认
+      const result = await props.onFinish?.(formModel.value)
+      if (result) closeDialog()
     } catch (error) {
       events.onFinishError(error)
     } finally {

@@ -5,7 +5,7 @@
  * 只做展示，不碰数据。自定义渲染优先用列插槽（#propName），
  * 需要跨表复用逻辑时再传 column.cellComponent。
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElAvatar, ElImage, ElProgress, ElRate, ElTag, ElTooltip } from 'element-plus'
 import { resolveCell } from '../core/valueType'
 import type { ProColumn } from '../types'
@@ -28,12 +28,34 @@ const resolved = computed(() => {
     valueType: effective,
     valueEnum: props.column.valueEnum,
     valueFormat: props.column.valueFormat,
+    fieldProps: props.column.fieldProps,
     index: props.index,
     emptyText: props.emptyText,
   })
 })
 
 const copyable = computed(() => !!props.column.copyable && resolved.value.kind !== 'empty')
+
+/** ellipsis：溢出时才出 tooltip。手动控制可见性——EP 的 tooltip 在 mouseenter 同步读 disabled，
+ * 若用 disabled 门控，首次悬浮时量宽结果还没生效，会导致第一次不出 tooltip */
+const ellipsis = computed(() => !!props.column.ellipsis && resolved.value.kind === 'text')
+const ellipsisVisible = ref(false)
+function onTextEnter(e: MouseEvent) {
+  if (!ellipsis.value) return
+  const host = e.currentTarget as HTMLElement
+  const textEl = host.querySelector('.el-pro-cell__ellipsis') as HTMLElement | null
+  ellipsisVisible.value = !!textEl && textEl.scrollWidth > textEl.clientWidth + 1
+}
+function onTextLeave() {
+  ellipsisVisible.value = false
+}
+// 行复用（排序/刷新后同一实例渲染新内容）时旧测量作废，重置
+watch(
+  () => resolved.value.text,
+  () => {
+    ellipsisVisible.value = false
+  },
+)
 
 async function handleCopy() {
   try {
@@ -104,22 +126,51 @@ async function handleCopy() {
     <span>{{ resolved.text }}</span>
   </span>
 
-  <span v-else class="el-pro-cell__text">
-    <span>{{ resolved.text }}</span>
-    <ElTooltip v-if="copyable" content="复制" placement="top" :show-after="300">
-      <span class="el-pro-cell__copy" role="button" tabindex="0" @click.stop="handleCopy">
-        <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2">
-          <rect x="5.5" y="5.5" width="8" height="8" rx="1.6" />
-          <path d="M10.5 5.5V4A1.6 1.6 0 0 0 8.9 2.4H4A1.6 1.6 0 0 0 2.4 4v4.9A1.6 1.6 0 0 0 4 10.5h1.5" />
-        </svg>
-      </span>
-    </ElTooltip>
-  </span>
+  <pre v-else-if="resolved.kind === 'code'" class="el-pro-cell__code">{{ resolved.codeText }}</pre>
+
+  <ElTooltip
+    v-else
+    manual
+    :visible="ellipsis ? ellipsisVisible : false"
+    :content="resolved.text"
+    placement="top"
+    :show-after="300"
+  >
+    <span
+      class="el-pro-cell__text"
+      :style="resolved.textColor ? { color: resolved.textColor } : undefined"
+      @mouseenter="onTextEnter"
+      @mouseleave="onTextLeave"
+    >
+      <span class="el-pro-cell__ellipsis">{{ resolved.text }}</span>
+      <ElTooltip v-if="copyable" content="复制" placement="top" :show-after="300">
+        <span class="el-pro-cell__copy" role="button" tabindex="0" @click.stop="handleCopy">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2">
+            <rect x="5.5" y="5.5" width="8" height="8" rx="1.6" />
+            <path d="M10.5 5.5V4A1.6 1.6 0 0 0 8.9 2.4H4A1.6 1.6 0 0 0 2.4 4v4.9A1.6 1.6 0 0 0 4 10.5h1.5" />
+          </svg>
+        </span>
+      </ElTooltip>
+    </span>
+  </ElTooltip>
 </template>
 
 <style>
 .el-pro-cell__empty {
   color: var(--el-text-color-placeholder);
+}
+.el-pro-cell__code {
+  margin: 0;
+  padding: 6px 8px;
+  max-width: 100%;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+  font-family: var(--el-font-family, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
 }
 .el-pro-cell__text {
   display: inline-flex;

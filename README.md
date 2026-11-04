@@ -512,7 +512,7 @@ async function create(values: Record<string, any>) {
 | `columns` | 同 `ElProForm` |
 | `model` | 受控数据。传了就一直用这一份，组件**不会重置它** |
 | `initialValues` | 内部草稿的初值，只在没传 `model` 时生效。**每次打开都重新拷一份**，所以取消掉的输入不会残留到下一次 |
-| `onFinish` | 校验通过后调用，即模板里的 `@finish`。返回 Promise 时等它 resolve 才关窗，reject 则保持打开 |
+| `onFinish` | 校验通过后调用，即模板里的 `@finish`。**返回真值（或 resolve 为真值）才关窗**，返回 `false` 可留在窗内做二次确认，reject 也保持打开；不传 `onFinish` 时提交不会自动关窗 |
 | `loading` | 外部已知的提交中状态，和内部状态一起控制按钮 loading |
 | `width` / `drawerSize` | 弹窗宽度 / 抽屉尺寸。注意抽屉的宽度是 `drawerSize`——`size` 是**表单控件尺寸**，两个 size 混用会改半天没反应 |
 

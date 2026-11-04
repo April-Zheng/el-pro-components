@@ -33,6 +33,7 @@
     "build": "vite build --mode lib",
     "build:demo": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "typecheck": "vue-tsc --noEmit"
   },
   "peerDependencies": {
@@ -46,7 +47,11 @@
     "typescript": "~5.4.5",
     "vite": "^5.4.0",
     "vite-plugin-dts": "^4.0.0",
+    "vitest": "^2.1.9",
     "vue": "^3.4.0",
     "vue-tsc": "^2.1.10"
+  },
+  "dependencies": {
+    "async-validator": "^4.2.5"
   }
 }

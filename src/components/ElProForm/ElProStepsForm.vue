@@ -220,7 +220,7 @@ const stepsDirection = computed(() => (props.layout === 'vertical' ? 'vertical' 
   >
     <!-- 步骤条 -->
     <div class="el-pro-steps-form__steps" :style="{ maxWidth: layout === 'vertical' ? undefined : stepsMaxWidth }">
-      <ElSteps :direction="stepsDirection" :current="step" v-bind="stepsProps">
+      <ElSteps :direction="stepsDirection" :active="step" v-bind="stepsProps">
         <ElStep
           v-for="(s, i) in steps"
           :key="stepName(s, i)"

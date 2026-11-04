@@ -184,7 +184,7 @@ export type TagStatus = (typeof TAG_STATUS)[number]
  * 单元格解析结果。`kind` 决定用哪种外壳渲染，其余字段是给外壳的入参。
  */
 export interface ResolvedCell {
-  kind: 'text' | 'tag' | 'status' | 'progress' | 'image' | 'avatar' | 'color' | 'rate' | 'empty'
+  kind: 'text' | 'tag' | 'status' | 'progress' | 'image' | 'avatar' | 'color' | 'rate' | 'code' | 'empty'
   text: string
   /** kind === 'tag' | 'status' */
   tagType?: TagStatus
@@ -198,6 +198,10 @@ export interface ResolvedCell {
   colorValue?: string
   /** kind === 'rate' */
   rateValue?: number
+  /** kind === 'code'：读态用 <pre> 呈现的多行文本 */
+  codeText?: string
+  /** 文本色。percent 配 showColor 时红涨绿跌，其余场景目前不用 */
+  textColor?: string
   /** 原值，便于自定义插槽里使用 */
   raw: any
 }
@@ -211,6 +215,12 @@ export interface ResolveCellOptions {
   index?: number
   /** 空值占位，默认 '-'，传 false 关掉 */
   emptyText?: string | false
+  /**
+   * 列的 fieldProps。读态渲染也会读其中与格式相关的字段：
+   * - money：`precision` / `customSymbol` / `moneySymbol: false`
+   * - percent：`precision` / `showSymbol` / `showColor`
+   */
+  fieldProps?: Record<string, any>
 }
 
 const DATE_TYPE_FORMATS: Partial<Record<ProValueType, string>> = {
@@ -303,8 +313,22 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
   }
 
   switch (valueType) {
-    case 'money':
-      return { kind: 'text', text: `¥${formatNumber(value, valueFormat ?? '0,0.00')}`, raw: value }
+    case 'money': {
+      // 符号与精度可配（对齐 React Money）：customSymbol > moneySymbol（false 关、字符串换币种）> 默认 ¥；
+      // valueFormat 优先于 precision 数字
+      const fp = (opts.fieldProps ?? {}) as {
+        precision?: number
+        customSymbol?: string
+        moneySymbol?: boolean | string
+      }
+      const fmt =
+        valueFormat ??
+        (fp.precision !== undefined ? `0,0.${'0'.repeat(fp.precision)}` : '0,0.00')
+      const symbol =
+        fp.customSymbol ??
+        (fp.moneySymbol === false ? '' : typeof fp.moneySymbol === 'string' ? fp.moneySymbol : '¥')
+      return { kind: 'text', text: `${symbol}${formatNumber(value, fmt)}`, raw: value }
+    }
     case 'number':
     case 'slider':
       return { kind: 'text', text: formatNumber(value, valueFormat, 0), raw: value }
@@ -325,8 +349,26 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
     }
     case 'second':
       return { kind: 'text', text: formatSecond(value), raw: value }
-    case 'percent':
-      return { kind: 'text', text: `${formatNumber(value, valueFormat ?? '0.0')}%`, raw: value }
+    case 'percent': {
+      // 对齐 React Percent：默认 2 位小数；showSymbol 正数加 +；showColor 红涨绿跌
+      const fp = (opts.fieldProps ?? {}) as {
+        precision?: number
+        showSymbol?: boolean
+        showColor?: boolean
+      }
+      const fmt = valueFormat ?? `0.${'0'.repeat(fp.precision ?? 2)}`
+      const num = Number(value)
+      let text = `${formatNumber(value, fmt)}%`
+      if (fp.showSymbol && Number.isFinite(num) && num > 0) text = `+${text}`
+      const textColor = fp.showColor
+        ? num > 0
+          ? 'var(--el-color-danger)'
+          : num < 0
+            ? 'var(--el-color-success)'
+            : undefined
+        : undefined
+      return { kind: 'text', text, textColor, raw: value }
+    }
     case 'rate':
       return {
         kind: 'rate',
@@ -373,6 +415,15 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
     }
     case 'image':
       return { kind: 'image', text: String(value), src: String(value), raw: value }
+    case 'code':
+    case 'jsonCode': {
+      // 对齐 React Code：读态用 <pre> 块呈现；jsonCode 对对象/数组自动 pretty-print
+      const text =
+        valueType === 'jsonCode' && value !== null && typeof value === 'object'
+          ? JSON.stringify(value, null, 2)
+          : String(value)
+      return { kind: 'code', text, codeText: text, raw: value }
+    }
     case 'avatar':
       return { kind: 'avatar', text: String(value), src: String(value), raw: value }
     case 'color':
@@ -411,6 +462,7 @@ export const DISPLAY_ONLY_VALUE_TYPES: ProValueType[] = [
   'avatar',
   'color',
   'code',
+  'jsonCode',
   'divider',
   'group',
 ]

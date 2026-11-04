@@ -167,6 +167,7 @@ const inputType = computed(() => {
       return 'password'
     case 'textarea':
     case 'code':
+    case 'jsonCode':
       return 'textarea'
     default:
       return 'text'
@@ -377,8 +378,8 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
     :type="inputType"
     :placeholder="placeholder"
     :show-password="effectiveType === 'password'"
-    :autosize="effectiveType === 'textarea' || effectiveType === 'code' ? { minRows: 2, maxRows: 6 } : undefined"
-    :class="effectiveType === 'code' ? 'el-pro-field--code' : undefined"
+    :autosize="effectiveType === 'textarea' || effectiveType === 'code' || effectiveType === 'jsonCode' ? { minRows: 2, maxRows: 6 } : undefined"
+    :class="effectiveType === 'code' || effectiveType === 'jsonCode' ? 'el-pro-field--code' : undefined"
     clearable
     class="el-pro-field--full"
     v-bind="mergedProps"

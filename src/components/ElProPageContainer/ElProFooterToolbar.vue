@@ -5,11 +5,11 @@
  * 结构照源码：左边 `extra`（通常是「已选 N 项」），右边操作按钮，整条钉在视口底部、
  * 半透明 + 背景模糊，滚动内容从它下面穿过。
  *
- * 源码从 RouteContext 里读 `siderWidth` 算宽度，我们这里没有路由上下文，
- * 改成显式的 `offsetLeft`。侧边布局里传 `var(--el-pro-sider-width)` 就能跟着菜单折叠走
- * —— ElProLayout 已经把这个变量打在根节点上了。
+ * 源码从 RouteContext 里读 `siderWidth` 算宽度。这里对齐：inject 布局上下文拿当前
+ * 侧栏宽度自动避让（随折叠联动）；不在布局内时回落 0。显式传 `offsetLeft` 始终优先。
  */
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
+import { PRO_LAYOUT } from '../../core/layoutContext'
 
 defineOptions({ name: 'ElProFooterToolbar' })
 
@@ -20,8 +20,8 @@ const props = withDefaults(
     /** 是否钉在视口底部。传 false 就退回文档流（嵌在卡片里时用） @default true */
     fixed?: boolean
     /**
-     * 左侧避让距离。侧边布局下传侧栏宽度，否则整条会盖住菜单。
-     * 数字按 px 处理，字符串原样当 CSS 值
+     * 左侧避让距离。不传时自动从外层 ElProLayout 布局上下文取当前侧栏宽度
+     * （随折叠联动）；不在布局内或想覆盖时显式传。数字按 px，字符串原样当 CSS 值
      */
     offsetLeft?: number | string
     zIndex?: number
@@ -30,14 +30,22 @@ const props = withDefaults(
   }>(),
   {
     fixed: true,
-    offsetLeft: 0,
+    offsetLeft: undefined,
     zIndex: 99,
     teleport: false,
   },
 )
 
+/** 自动避让：在 ElProLayout 内时取当前侧栏宽度，不在布局内回落 0 */
+const layoutCtx = inject(PRO_LAYOUT, null)
+const effectiveOffsetLeft = computed<number | string>(() => {
+  if (props.offsetLeft !== undefined) return props.offsetLeft
+  return layoutCtx ? layoutCtx.siderWidth() : 0
+})
+
 const barStyle = computed(() => {
-  const left = typeof props.offsetLeft === 'number' ? `${props.offsetLeft}px` : props.offsetLeft
+  const value = effectiveOffsetLeft.value
+  const left = typeof value === 'number' ? `${value}px` : value
   if (!props.fixed) return { zIndex: props.zIndex }
   return { left, zIndex: props.zIndex }
 })
