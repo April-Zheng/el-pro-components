@@ -33,6 +33,9 @@ export interface ProTableCellContext {
   draftOf: (row: any) => Record<string, any>
   setDraftValue: (row: any, prop: string, value: any) => void
 
+  /** 行拖拽：值等于该列 prop 时，单元格左侧渲染拖拽把手 */
+  dragSortKey: Readonly<Ref<string | undefined>>
+
   startEdit: (row: any) => void
   saveRow: (row: any) => void
   cancelRow: (row: any) => void

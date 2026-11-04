@@ -142,6 +142,11 @@ function columnSlot(name: string) {
     :formatter="column.formatter"
   >
     <template #default="{ row, $index }">
+    <div class="el-pro-table__cell" :class="{ 'is-draggable': ctx.dragSortKey.value === column.prop }">
+      <span v-if="ctx.dragSortKey.value === column.prop" class="el-pro-table__drag-handle" aria-hidden="true">
+        <svg viewBox="0 0 10 16" width="10" height="14" fill="currentColor"><circle cx="2" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/><circle cx="2" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="2" cy="13" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>
+      </span>
+      <div class="el-pro-table__cell-body">
       <component
         :is="columnSlot(ctx.slotName(column))"
         v-if="ctx.hasSlot(column)"
@@ -228,6 +233,8 @@ function columnSlot(name: string) {
         :index="$index"
         :empty-text="ctx.emptyText.value"
       />
+    </div>
+    </div>
     </template>
 
     <template v-if="column.showOverflowTooltip === false" #header>

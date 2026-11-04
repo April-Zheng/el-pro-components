@@ -25,6 +25,7 @@ import StatisticPage from './pages/StatisticPage.vue'
 import ListPage from './pages/ListPage.vue'
 import EditablePage from './pages/EditablePage.vue'
 import DataModePage from './pages/DataModePage.vue'
+import TableInteractivePage from './pages/TableInteractivePage.vue'
 import PlaceholderPage from './pages/PlaceholderPage.vue'
 
 const active = ref(initialPage())
@@ -58,6 +59,7 @@ const active = ref(initialPage())
     <ListPage v-else-if="active === '/list'" />
     <EditablePage v-else-if="active === '/editable'" />
     <DataModePage v-else-if="active === '/data-mode'" />
+    <TableInteractivePage v-else-if="active === '/table-interactive'" />
     <PlaceholderPage v-else :path="active" />
 
     <template #footer>

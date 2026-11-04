@@ -8,9 +8,11 @@
  */
 import { computed, ref } from 'vue'
 import {
+  ElButton,
   ElDropdown,
   ElDropdownItem,
   ElDropdownMenu,
+  ElInput,
   ElPopover,
   ElTooltip,
 } from 'element-plus'
@@ -35,7 +37,10 @@ const props = withDefaults(
       density?: boolean
       setting?: boolean
       fullscreen?: boolean
+      search?: boolean | { name?: string; placeholder?: string }
     } | false
+    /** 列设置面板配置，透传给 ColumnSetting */
+    settingOptions?: { listHeight?: number; checkable?: boolean; draggable?: boolean }
   }>(),
   {
     size: 'default',
@@ -56,6 +61,10 @@ const emit = defineEmits<{
   pin: [string, ColumnFixed]
   'update:size': [TableSize]
   'update:fullscreen': [boolean]
+  /** 工具栏关键字搜索提交（回车或点按钮）。关键字由 ElProTable 并入请求参数 */
+  'keyword-search': [string]
+  /** 清空关键字并重查 */
+  'keyword-clear': []
 }>()
 
 const opts = computed(() => {
@@ -71,6 +80,22 @@ const opts = computed(() => {
 })
 
 const settingOpen = ref(false)
+
+/** 工具栏关键字搜索：true 用默认文案，对象可配 placeholder */
+const searchCfg = computed(() => {
+  if (!props.options || !props.options.search) return null
+  return props.options.search === true ? { placeholder: '搜索关键字，回车确认' } : props.options.search
+})
+const keyword = ref('')
+
+function submitSearch() {
+  emit('keyword-search', keyword.value)
+}
+
+function clearSearch() {
+  keyword.value = ''
+  emit('keyword-clear')
+}
 
 /** 一个可设置的列都没有时，齿轮点开是空面板，不如不渲染 */
 const hasSettableColumns = computed(() => props.columns.some(isSettableColumn))
@@ -99,6 +124,19 @@ const densityItems: { key: TableSize; label: string }[] = [
     </div>
 
     <div class="el-pro-toolbar__right">
+      <!-- 工具栏关键字搜索：回车提交，有值时显示清空按钮 -->
+      <div v-if="searchCfg" class="el-pro-toolbar__search">
+        <ElInput
+          v-model="keyword"
+          :placeholder="searchCfg.placeholder"
+          size="small"
+          clearable
+          @keyup.enter="submitSearch"
+          @clear="clearSearch"
+        />
+        <ElButton size="small" @click="submitSearch">搜索</ElButton>
+      </div>
+
       <ElTooltip v-if="opts.reload" content="刷新" placement="top" :show-after="300">
         <button type="button" class="el-pro-toolbar__icon" :class="{ 'is-loading': loading }" @click="emit('refresh')">
           <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4">
@@ -183,6 +221,9 @@ const densityItems: { key: TableSize; label: string }[] = [
           :columns="columns"
           :column-state="columnState"
           :column-fixed="columnFixed"
+          :list-height="settingOptions?.listHeight"
+          :checkable="settingOptions?.checkable"
+          :draggable="settingOptions?.draggable"
           @update:column-state="emit('update:columnState', $event)"
           @update:column-order="emit('update:columnOrder', $event)"
           @update:column-fixed="emit('update:columnFixed', $event)"
@@ -281,5 +322,14 @@ const densityItems: { key: TableSize; label: string }[] = [
 .el-pro-density-popper .el-dropdown-menu__item.is-active {
   color: var(--el-color-primary);
   font-weight: 500;
+}
+.el-pro-toolbar__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 4px;
+}
+.el-pro-toolbar__search .el-input {
+  width: 180px;
 }
 </style>

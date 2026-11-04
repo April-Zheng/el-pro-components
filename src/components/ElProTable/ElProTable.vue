@@ -12,10 +12,11 @@
  * - 行拖拽排序：那是业务态（改 sort 字段），和列顺序不是一回事，交给 sortablejs
  * - 受控数据模式（value/onChange，不配 request）：本库定位是「配 request 的 CRUD 页」
  */
-import { computed, onBeforeUnmount, provide, reactive, ref, toRef, useAttrs, useSlots, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, provide, reactive, ref, toRef, useAttrs, useSlots, watch } from 'vue'
 import type { Slots } from 'vue'
 import { ElButton, ElMessage, ElPagination, ElTable, ElTableColumn } from 'element-plus'
 import Schema from 'async-validator'
+import Sortable from 'sortablejs'
 import { useTable } from '../../core/useTable'
 import {
   applyColumnOrder,
@@ -45,12 +46,13 @@ const props = withDefaults(
     /** 是否显示搜索栏 */
     search?: boolean
     defaultCollapsed?: boolean
-    /** 工具栏图标开关 */
+    /** 工具栏图标开关。search 传 true 开启工具栏关键字搜索（参数名默认 keyword），对象可配 name/placeholder */
     options?: {
       reload?: boolean
       density?: boolean
       setting?: boolean
       fullscreen?: boolean
+      search?: boolean | { name?: string; placeholder?: string }
     } | false
     /** 是否显示多选列 */
     selection?: boolean | { /** 跨页保留选中（默认开，前提是 rowKey 稳定） */ reserveSelection?: boolean }
@@ -89,6 +91,16 @@ const props = withDefaults(
      * 编辑/增删结果通过 update:dataSource 交还，配 v-model:data-source 使用
      */
     dataSource?: any[]
+    /** 列状态持久化位置。默认 localStorage；sessionStorage 关闭标签页即失效 */
+    persistenceType?: 'localStorage' | 'sessionStorage'
+    /** 受控列显隐（prop -> 是否可见）。不传则内部维护并持久化 */
+    columnState?: Record<string, boolean>
+    /** 同值单元格纵向合并的字段（prop 列表，顺序即多级合并层级）；也可在列上逐个开 autoMerge */
+    mergeFields?: string[]
+    /** 行拖拽排序：传列的 prop，该列单元格左侧出现拖拽把手；拖完 emit drag-sort-end */
+    dragSortKey?: string
+    /** 列设置面板配置：面板最大高度 / 是否显示勾选框 / 是否可拖拽排序 */
+    columnSetting?: { listHeight?: number; checkable?: boolean; draggable?: boolean }
   }>(),
   {
     rowKey: 'id',
@@ -133,6 +145,10 @@ const emit = defineEmits<{
   'update:dataSource': [any[]]
   /** 受控分页：内部翻页/改页长时交还外部，配 v-model:pagination */
   'update:pagination': [Record<string, any>]
+  /** 受控列显隐：配 v-model:column-state */
+  'update:columnState': [Record<string, boolean>]
+  /** 行拖拽排序结束，带上重排后的新数据 */
+  'drag-sort-end': [any[]]
 }>()
 
 const attrs = useAttrs()
@@ -154,14 +170,25 @@ const ORDER_STORAGE_PREFIX = 'el-pro-table-order:'
 /** 固定列同样单独存，理由同上 */
 const FIXED_STORAGE_PREFIX = 'el-pro-table-fixed:'
 
+/** 持久化位置：默认 localStorage，persistenceType='sessionStorage' 时换库 */
+function storage(): Storage | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return props.persistenceType === 'sessionStorage' ? sessionStorage : localStorage
+  } catch {
+    return null
+  }
+}
+
 /**
- * 读写 localStorage 的三处都要 try/catch：
+ * 读写列状态的四处都要 try/catch：
  * 隐私模式、禁用 cookie、配额写满都会抛，不能让表格因此白屏。
  */
 function readJSON<T>(key: string, fallback: T): T {
-  if (!props.persistenceKey) return fallback
+  const store = storage()
+  if (!props.persistenceKey || !store) return fallback
   try {
-    const raw = localStorage.getItem(key + props.persistenceKey)
+    const raw = store.getItem(key + props.persistenceKey)
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
     return fallback
@@ -169,29 +196,47 @@ function readJSON<T>(key: string, fallback: T): T {
 }
 
 function writeJSON(key: string, value: unknown) {
-  if (!props.persistenceKey) return
+  const store = storage()
+  if (!props.persistenceKey || !store) return
   try {
-    localStorage.setItem(key + props.persistenceKey, JSON.stringify(value))
+    store.setItem(key + props.persistenceKey, JSON.stringify(value))
   } catch {
     /* 忽略 */
   }
 }
 
 const columnState = ref<Record<string, boolean>>(
-  readJSON<Record<string, boolean>>(STORAGE_PREFIX, {}),
+  props.columnState ?? readJSON<Record<string, boolean>>(STORAGE_PREFIX, {}),
 )
 
 watch(
   columnState,
-  (val) => writeJSON(STORAGE_PREFIX, val),
+  (val) => {
+    writeJSON(STORAGE_PREFIX, val)
+    emit('update:columnState', { ...val })
+  },
   { deep: true },
 )
 
-/** persistenceKey 运行时变更：重读新 key 的存储（对齐 React Store 的监听协议） */
+/** 受控列显隐：外部值变化同步进来（与 columnOrder/columnFixed 同一模式）。浅比较挡住 v-model 回流，避免回环 */
 watch(
-  () => props.persistenceKey,
+  () => props.columnState,
+  (val) => {
+    if (!val) return
+    const keys = Object.keys(val)
+    const same =
+      keys.length === Object.keys(columnState.value).length &&
+      keys.every((k) => columnState.value[k] === val[k])
+    if (!same) columnState.value = { ...val }
+  },
+  { deep: true },
+)
+
+/** persistenceKey / persistenceType 运行时变更：重读新 key 的存储（对齐 React Store 的监听协议）。受控 columnState 时不重读显隐 */
+watch(
+  [() => props.persistenceKey, () => props.persistenceType],
   () => {
-    columnState.value = readJSON<Record<string, boolean>>(STORAGE_PREFIX, {})
+    if (!props.columnState) columnState.value = readJSON<Record<string, boolean>>(STORAGE_PREFIX, {})
     columnOrder.value = props.columnOrder.length
       ? [...props.columnOrder]
       : readJSON<string[]>(ORDER_STORAGE_PREFIX, [])
@@ -249,6 +294,55 @@ const fullscreen = ref(false)
 const selectionReserve = computed(() => {
   if (typeof props.selection === 'object' && props.selection.reserveSelection === false) return false
   return !!props.rowKey
+})
+
+/* --------------------------- 同值单元格合并 --------------------------- */
+
+/**
+ * mergeFields / 列级 autoMerge 的 span-method。
+ *
+ * 多级合并：第 i 个字段的连续段必须在前 i 个字段都相同的前提下延续，
+ * 与 React mergeCellSpan 的「多级合并顺序」一致。树形数据（行带 children）直接跳过 ——
+ * 展开子行与跨行合并会冲突导致列错位，与 React 的处理相同。
+ */
+const mergeDescriptors = computed<string[]>(() => {
+  const explicit = props.mergeFields ?? []
+  const fromColumns = props.columns.filter((c) => c.autoMerge && c.prop).map((c) => c.prop as string)
+  // mergeFields 顺序优先，autoMerge 列按列顺序补充去重
+  return [...new Set([...explicit, ...fromColumns.filter((p) => !explicit.includes(p))])]
+})
+
+const tableSpanMethod = computed(() => {
+  if (!mergeDescriptors.value.length) return undefined
+  const fields = mergeDescriptors.value
+  const rows = data.value
+  // 树形数据：展开子行与跨行合并冲突导致列错位，跳过（与 React 一致）
+  if (rows.some((r) => Array.isArray((r as any).children) && (r as any).children.length > 0)) {
+    return undefined
+  }
+
+  const spans: number[][] = []
+  for (let fi = 0; fi < fields.length; fi += 1) {
+    const rowSpans = new Array(rows.length).fill(1)
+    let runStart = 0
+    // 多级合并：第 i 层的连续段必须在前 i 层字段都相同的前提下延续
+    const sameUpTo = (a: any, b: any) => fields.slice(0, fi + 1).every((f) => a?.[f] === b?.[f])
+    for (let i = 1; i <= rows.length; i += 1) {
+      if (i < rows.length && sameUpTo(rows[i], rows[runStart])) continue
+      for (let j = runStart; j < i; j += 1) rowSpans[j] = j === runStart ? i - runStart : 0
+      runStart = i
+    }
+    spans.push(rowSpans)
+  }
+
+  return ({ row, column }: any) => {
+    const fi = fields.indexOf(String(column?.property ?? ''))
+    if (fi < 0) return
+    const rowIndex = rows.indexOf(row)
+    if (rowIndex < 0) return
+    const span = spans[fi][rowIndex]
+    return { rowspan: span, colspan: span === 0 ? 0 : 1 }
+  }
 })
 
 /** 分页是否受控：pagination 对象里传了 current 或 pageSize 即视为受控 */
@@ -323,6 +417,67 @@ watch(
   },
   { immediate: true },
 )
+
+/* ------------------------------ 行拖拽排序 ------------------------------ */
+
+/** Sortable 实例。数据/配置变化时重建，卸载时销毁 */
+let sortableInstance: Sortable | null = null
+
+function destroySortable() {
+  sortableInstance?.destroy()
+  sortableInstance = null
+}
+
+function initSortable() {
+  destroySortable()
+  if (!props.dragSortKey) return
+  const el = (tableRef.value as any)?.$el as HTMLElement | undefined
+  const tbody = el?.querySelector('.el-table__body-wrapper tbody') as HTMLElement | null
+  if (!tbody) return
+  sortableInstance = Sortable.create(tbody, {
+    animation: 150,
+    handle: '.el-pro-table__drag-handle',
+    onEnd: ({ oldIndex, newIndex }) => {
+      if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+      // tbody 顺序 = 当前页渲染顺序；受控数据模式走 commitData 交还外部
+      const next = [...data.value]
+      const [moved] = next.splice(oldIndex, 1)
+      next.splice(newIndex, 0, moved)
+      table.commitData(next)
+      emit('change', next)
+      emit('drag-sort-end', next)
+    },
+  })
+}
+
+watch(
+  [() => props.dragSortKey, data],
+  () => nextTick(initSortable),
+  { flush: 'post' },
+)
+onBeforeUnmount(destroySortable)
+
+/* ------------------------------ 工具栏关键字搜索 ------------------------------ */
+
+/** options.search 的关键字。提交时并入请求参数（key 名可配，默认 keyword） */
+const toolbarKeyword = ref('')
+
+function submitToolbarSearch() {
+  const cfg = typeof props.options === 'object' ? props.options.search : undefined
+  if (!cfg) return
+  const name = (cfg === true ? {} : cfg).name ?? 'keyword'
+  table.searchValues[name] = toolbarKeyword.value
+  void table.submitSearch()
+}
+
+function clearToolbarSearch() {
+  const cfg = typeof props.options === 'object' ? props.options.search : undefined
+  if (!cfg) return
+  const name = (cfg === true ? {} : cfg).name ?? 'keyword'
+  delete table.searchValues[name]
+  toolbarKeyword.value = ''
+  void table.submitSearch()
+}
 
 const showSearch = computed(() => props.search && searchColumns.value.length > 0)
 
@@ -539,14 +694,32 @@ function defaultRecord(): Record<string, any> {
   return rec
 }
 
-async function addRow() {
+/** 新增一行。recordCreator.position 决定插顶部还是尾部；recordCreator.parentKey 决定插进哪棵子树 */
+async function addRow(options?: { position?: 'top' | 'bottom'; parentKey?: string | number }) {
   const cfg = editableConfig.value
   if (!cfg) return
+  const creator = cfg.recordCreator === false ? undefined : cfg.recordCreator
+  const position = options?.position ?? creator?.position ?? 'top'
+  const parentKey = options?.parentKey ?? creator?.parentKey
   const row = cfg.newRecord ? cfg.newRecord(data.value.length) : defaultRecord()
   // 先把临时 key 打到对象上，之后无论是原始对象还是 el-table 的 Proxy 都能取到同一个 key
   stampTmpKey(row)
+
+  let next: any[]
+  if (parentKey !== undefined) {
+    // 树形新增：插进目标行的 children，扁平数组插入逻辑不适用
+    const parent = data.value.find((r) => String(keyOf(r)) === String(parentKey))
+    if (!parent) return
+    if (!Array.isArray(parent.children)) parent.children = []
+    parent.children.push(row)
+    next = [...data.value]
+  } else if (position === 'bottom') {
+    next = [...data.value, row]
+  } else {
+    next = [row, ...data.value]
+  }
   // 走 commitData：受控数据模式下新增结果交还外部（v-model:dataSource）
-  table.commitData([row, ...data.value])
+  table.commitData(next)
   // 不动 total：total 是服务端分页口径，本地插行改变它会造成翻页错位（对齐 React）
   emit('change', data.value)
 
@@ -565,7 +738,22 @@ async function addRow() {
   setEditingKeys([...editingKeys.value, key])
 }
 
-const showAddRow = computed(() => !!editableConfig.value && editableConfig.value.addable !== false)
+/** 「新增一行」按钮：addable/recordCreator 开关 + maxLength 上限共同决定 */
+const showAddRow = computed(() => {
+  const cfg = editableConfig.value
+  if (!cfg || cfg.addable === false || cfg.recordCreator === false) return false
+  if (cfg.maxLength !== undefined && data.value.length >= cfg.maxLength) return false
+  return true
+})
+const addRowText = computed(() => {
+  const cfg = editableConfig.value
+  const text = cfg && cfg.recordCreator !== false ? cfg.recordCreator?.text : undefined
+  return text ?? '新增一行'
+})
+const addRowBottom = computed(() => {
+  const cfg = editableConfig.value
+  return cfg?.recordCreator !== false && cfg?.recordCreator?.position === 'bottom'
+})
 const showDeleteRow = computed(() => !!editableConfig.value && editableConfig.value.deletable !== false)
 
 /**
@@ -746,6 +934,7 @@ function hasSlot(col: ProColumn) {
  * 多级表头无论嵌几层，子组件拿到的都是同一份上下文，参数表不随层数膨胀。
  */
 provide(PRO_TABLE_CELL, {
+  dragSortKey: toRef(props, 'dragSortKey'),
   slots: slots as unknown as Slots,
   emptyText: toRef(props, 'emptyText'),
   editable: editableConfig,
@@ -817,7 +1006,10 @@ defineExpose({
         :fullscreen="fullscreen"
         :loading="loading"
         :options="options"
+        :setting-options="columnSetting"
         @refresh="handleRefresh"
+        @keyword-search="submitToolbarSearch"
+        @keyword-clear="clearToolbarSearch"
         @update:column-state="onColumnStateChange"
         @update:column-order="onColumnOrderChange"
         @update:column-fixed="onColumnFixedChange"
@@ -829,7 +1021,7 @@ defineExpose({
           <slot name="toolbar" />
         </template>
         <template #actions>
-          <ElButton v-if="showAddRow" type="primary" size="small" @click="addRow">新增一行</ElButton>
+          <ElButton v-if="showAddRow && !addRowBottom" type="primary" size="small" @click="addRow()">{{ addRowText }}</ElButton>
           <slot name="toolbarActions" />
         </template>
       </TableToolbar>
@@ -851,6 +1043,7 @@ defineExpose({
         :row-key="tableRowKey"
         :size="tableSize"
         class="el-pro-table__table"
+        :span-method="tableSpanMethod"
         v-bind="attrs"
         @sort-change="table.handleSortChange"
         @selection-change="handleSelectionChange"
@@ -888,6 +1081,11 @@ defineExpose({
         </template>
       </ElTable>
 
+      <!-- recordCreator position: 'bottom'：按钮在表格下方，新行追加到末尾 -->
+      <div v-if="showAddRow && addRowBottom" class="el-pro-table__creator">
+        <ElButton type="primary" plain size="small" @click="addRow()">{{ addRowText }}</ElButton>
+      </div>
+
       <div v-if="pagination !== false" class="el-pro-table__footer">
         <ElPagination
           :current-page="current"
@@ -907,6 +1105,30 @@ defineExpose({
 <style>
 .el-pro-table {
   position: relative;
+}
+.el-pro-table__creator {
+  margin-top: 12px;
+}
+.el-pro-table__cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.el-pro-table__cell-body {
+  min-width: 0;
+  flex: 1;
+}
+.el-pro-table__drag-handle {
+  flex: none;
+  display: inline-flex;
+  cursor: grab;
+  color: var(--el-text-color-placeholder);
+}
+.el-pro-table__drag-handle:hover {
+  color: var(--el-color-primary);
+}
+.el-pro-table__drag-handle:active {
+  cursor: grabbing;
 }
 .el-pro-table__body {
   padding: 16px;

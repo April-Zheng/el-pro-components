@@ -703,6 +703,20 @@ export interface ProEditableConfig {
   type?: 'single' | 'multiple'
   /** 「新增一行」时生成的行数据。不传则用各列的 defaultValue 拼一个空对象 */
   newRecord?: (rowIndex: number) => Record<string, any>
+  /**
+   * 「新增一行」按钮的位置与文案。
+   * - position: 'top'（默认，插在数据顶部）| 'bottom'（追加到末尾，按钮也在表格下方）
+   * - text：按钮文案，默认「新增一行」
+   * - parentKey：传了则新行插入该行的 children（树形新增）
+   * 传 false 隐藏按钮（与 addable: false 等效）
+   */
+  recordCreator?: false | {
+    position?: 'top' | 'bottom'
+    text?: string
+    parentKey?: string | number
+  }
+  /** 最多同时存在多少行。达到后不再显示「新增一行」按钮 */
+  maxLength?: number
   /** 是否显示「新增一行」按钮 @default true */
   addable?: boolean
   /** 是否显示「删除」按钮 @default true */
@@ -830,6 +844,8 @@ export interface ProColumn<T = any> {
   listSlot?: ProListSlot
   /** 在 el-pro-form 里占几格（24 栅格），不传则用表单的默认 span */
   formSpan?: number
+  /** 同值单元格纵向自动合并。配合 ElProTable 的 mergeFields 使用；树形数据下自动跳过 */
+  autoMerge?: boolean
   /** 表单/搜索栏里禁用 */
   readonly?: boolean
   /** 透传给输入控件的 props（搜索模式下会被 search.props 覆盖） */

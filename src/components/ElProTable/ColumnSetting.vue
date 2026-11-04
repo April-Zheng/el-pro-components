@@ -28,9 +28,17 @@ const props = withDefaults(
     columnState: Record<string, boolean>
     /** 用户设置的固定列（prop -> left/right） */
     columnFixed?: ColumnFixedState
+    /** 面板列表最大高度（px），超出滚动 */
+    listHeight?: number
+    /** 是否显示勾选框。false 时面板只做排序/固定，不能隐藏列 */
+    checkable?: boolean
+    /** 是否允许拖拽排序（分组列存在时强制关闭，见上方说明） */
+    draggable?: boolean
   }>(),
   {
     columnFixed: () => ({} as ColumnFixedState),
+    checkable: true,
+    draggable: true,
   },
 )
 
@@ -201,17 +209,18 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
 <template>
   <div class="el-pro-setting">
     <div class="el-pro-setting__head">
-      <ElCheckbox v-model="allChecked" size="small">列展示</ElCheckbox>
+      <ElCheckbox v-if="checkable" v-model="allChecked" size="small">列展示</ElCheckbox>
       <ElButton link type="primary" size="small" @click="resetColumns">重置</ElButton>
     </div>
 
     <!-- 用原生 HTML5 拖拽，不引 sortablejs：一行小列表不值一个运行时依赖 -->
-    <div class="el-pro-setting__list">
+    <div class="el-pro-setting__list" :style="listHeight ? { maxHeight: listHeight + 'px' } : undefined">
       <template v-for="(row, index) in rows" :key="row.key">
         <!-- 分组：只是全选开关，不落自己的显隐状态 -->
         <div v-if="row.kind === 'group'" class="el-pro-setting__row is-group">
           <span class="el-pro-setting__grip is-hidden" aria-hidden="true" />
           <ElCheckbox
+            v-if="checkable"
             :model-value="groupChecked(row.props)"
             :indeterminate="groupIndeterminate(row.props)"
             size="small"
@@ -230,7 +239,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
             'is-over-top': dragOver === index && dragFrom > index,
             'is-over-bottom': dragOver === index && dragFrom < index,
           }"
-          :draggable="!grouped"
+          :draggable="!grouped && draggable"
           @dragstart="onDragStart(index, $event)"
           @dragover.prevent="onDragOver(index)"
           @drop.prevent="onDrop(index)"
@@ -238,7 +247,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
         >
           <span
             class="el-pro-setting__grip"
-            :class="{ 'is-hidden': grouped }"
+            :class="{ 'is-hidden': grouped || !draggable }"
             aria-hidden="true"
           >
             <svg viewBox="0 0 8 14" width="8" height="14" fill="currentColor">
@@ -251,6 +260,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
             </svg>
           </span>
           <ElCheckbox
+            v-if="checkable"
             :model-value="visibleProps.includes(row.col.prop!)"
             :disabled="!!row.col.disableSetting"
             size="small"
@@ -258,6 +268,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
           >
             {{ row.col.label ?? row.col.prop }}
           </ElCheckbox>
+          <span v-else class="el-pro-setting__label">{{ row.col.label ?? row.col.prop }}</span>
 
           <!--
             固定在列首 / 列尾。用 ElTooltip 而不是原生 title：
@@ -397,6 +408,11 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
   flex: 1;
 }
 .el-pro-setting__row .el-checkbox__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.el-pro-setting__label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
