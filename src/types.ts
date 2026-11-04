@@ -281,6 +281,8 @@ export interface ProRequestResult<T = any> {
   /** 返回 false 会让表格进入空态而不报错，用于业务层级的失败 */
   success?: boolean
   errorMessage?: string
+  /** 游标分页：本页的下一页游标。有值表示还有下一页；配合 pagination.type='cursor' 使用 */
+  nextToken?: string
 }
 
 /**

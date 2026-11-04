@@ -54,8 +54,15 @@ const props = withDefaults(
     } | false
     /** 是否显示多选列 */
     selection?: boolean | { /** 跨页保留选中（默认开，前提是 rowKey 稳定） */ reserveSelection?: boolean }
-    /** 分页配置，传 false 关闭 */
-    pagination?: false | { pageSizes?: number[]; layout?: string }
+    /** 分页配置。传 false 关闭；对象可配 pageSizes/layout，type:'cursor' 启用游标分页，
+     *  传 current/pageSize 则启用受控分页（内部翻页经 update:pagination 交还） */
+    pagination?: false | {
+      pageSizes?: number[]
+      layout?: string
+      type?: 'page' | 'cursor'
+      current?: number
+      pageSize?: number
+    }
     defaultPageSize?: number
     /** 关闭时会话内不自动请求，需手动调 action.reload() */
     immediate?: boolean
@@ -73,6 +80,15 @@ const props = withDefaults(
     editable?: boolean | ProEditableConfig
     /** 受控的编辑行 key，配合 v-model:editable-keys */
     editableKeys?: (string | number)[]
+    /** 轮询间隔毫秒（低于 2000 被钮到 2000），true 为 2000；函数可按最新数据返回下一次间隔 */
+    polling?: number | boolean | ((data: any[]) => number | boolean | undefined | void)
+    /** 响应数据转换：写进表格前对 data 做最后一道整形 */
+    postData?: (data: any[]) => any[]
+    /**
+     * 受控数据模式：传入后不发请求，数据完全由外部提供；
+     * 编辑/增删结果通过 update:dataSource 交还，配 v-model:data-source 使用
+     */
+    dataSource?: any[]
   }>(),
   {
     rowKey: 'id',
@@ -113,6 +129,10 @@ const emit = defineEmits<{
   'update:editableKeys': [(string | number)[]]
   /** 可编辑表格里数据发生变化（保存 / 删除 / 新增）后派发 */
   change: [any[]]
+  /** 受控数据模式：数组级别变化（增删/重排）交还外部 */
+  'update:dataSource': [any[]]
+  /** 受控分页：内部翻页/改页长时交还外部，配 v-model:pagination */
+  'update:pagination': [Record<string, any>]
 }>()
 
 const attrs = useAttrs()
@@ -231,20 +251,78 @@ const selectionReserve = computed(() => {
   return !!props.rowKey
 })
 
+/** 分页是否受控：pagination 对象里传了 current 或 pageSize 即视为受控 */
+const paginationControlled = computed(
+  () =>
+    typeof props.pagination === 'object' &&
+    (props.pagination.current !== undefined || props.pagination.pageSize !== undefined),
+)
+
+/** 受控分页：外部值变化同步进来（触发重新请求）。immediate 与 defaultCurrent/defaultPageSize 配合，挂载时不产生多余请求 */
+watch(
+  () =>
+    typeof props.pagination === 'object'
+      ? ([props.pagination.current, props.pagination.pageSize] as const)
+      : ([undefined, undefined] as const),
+  ([c, s]) => {
+    if (!paginationControlled.value) return
+    const patch: { current?: number; pageSize?: number } = {}
+    if (c !== undefined && c !== table.current.value) patch.current = c
+    if (s !== undefined && s !== table.pageSize.value) patch.pageSize = s
+    if (Object.keys(patch).length) void table.action.setPage(patch)
+  },
+  { immediate: true },
+)
+
+/** 翻页：受控时交还外部（v-model:pagination），非受控直接走内部 */
+function onPageChange(page: number) {
+  if (paginationControlled.value && typeof props.pagination === 'object') {
+    emit('update:pagination', { ...props.pagination, current: page })
+    return
+  }
+  void table.handlePageChange(page)
+}
+
+/** 改页长：受控时交还外部并回第一页，非受控直接走内部 */
+function onPageSizeChange(size: number) {
+  if (paginationControlled.value && typeof props.pagination === 'object') {
+    emit('update:pagination', { ...props.pagination, pageSize: size, current: 1 })
+    return
+  }
+  void table.handlePageSizeChange(size)
+}
+
 /* ------------------------------ 数据 ------------------------------ */
 
 const table = useTable({
   columns: () => props.columns,
   request: props.request,
   params: () => props.params,
-  defaultPageSize: props.defaultPageSize,
+  defaultPageSize:
+    typeof props.pagination === 'object' ? (props.pagination.pageSize ?? props.defaultPageSize) : props.defaultPageSize,
+  defaultCurrent: typeof props.pagination === 'object' ? props.pagination.current : undefined,
   immediate: props.immediate,
   paramsAdapter: props.paramsAdapter,
+  polling: () => props.polling,
+  postData: props.postData,
+  cursor: () => typeof props.pagination === 'object' && props.pagination.type === 'cursor',
+  dataSource: () => props.dataSource,
+  onDataSourceChange: (next) => emit('update:dataSource', next),
   onLoad: (data) => emit('load', data),
   onError: (err) => emit('error', err),
 })
 
-const { data, loading, total, current, pageSize, searchValues, tableColumns, searchColumns } = table
+const { data, loading, pollingLoading, total, current, pageSize, searchValues, tableColumns, searchColumns } = table
+
+/** 受控分页的反向同步：搜索/排序/重置等内部逻辑把页码拉回 1 时，也要交还外部，否则内外脱节无法自愈 */
+watch(table.current, (c) => {
+  if (!paginationControlled.value || typeof props.pagination !== 'object') return
+  if (c !== props.pagination.current) emit('update:pagination', { ...props.pagination, current: c })
+})
+watch(table.pageSize, (s) => {
+  if (!paginationControlled.value || typeof props.pagination !== 'object') return
+  if (s !== props.pagination.pageSize) emit('update:pagination', { ...props.pagination, pageSize: s })
+})
 
 const showSearch = computed(() => props.search && searchColumns.value.length > 0)
 
@@ -402,8 +480,9 @@ async function saveRow(row: any): Promise<boolean> {
   }
   delete drafts[String(key)]
   setEditingKeys(editingKeys.value.filter((k) => String(k) !== String(key)))
-  // data 是 shallowRef，改行对象内部字段不会触发更新，必须换数组引用
-  data.value = [...data.value]
+  // data 是 shallowRef，改行对象内部字段不会触发更新，必须换数组引用；
+  // 走 commitData：受控数据模式下增删结果交还外部（v-model:dataSource）
+  table.commitData([...data.value])
   emit('change', data.value)
   return true
 }
@@ -444,8 +523,8 @@ async function removeRow(row: any) {
     return
   }
   delete drafts[String(key)]
-  // 同样不能靠引用比较：插槽传来的是 Proxy
-  data.value = data.value.filter((r) => String(keyOf(r)) !== String(key))
+  // 同样不能靠引用比较：插槽传来的是 Proxy；走 commitData 同步受控数据
+  table.commitData(data.value.filter((r) => String(keyOf(r)) !== String(key)))
   setEditingKeys(editingKeys.value.filter((k) => String(k) !== String(key)))
   emit('change', data.value)
 }
@@ -466,7 +545,8 @@ async function addRow() {
   const row = cfg.newRecord ? cfg.newRecord(data.value.length) : defaultRecord()
   // 先把临时 key 打到对象上，之后无论是原始对象还是 el-table 的 Proxy 都能取到同一个 key
   stampTmpKey(row)
-  data.value = [row, ...data.value]
+  // 走 commitData：受控数据模式下新增结果交还外部（v-model:dataSource）
+  table.commitData([row, ...data.value])
   // 不动 total：total 是服务端分页口径，本地插行改变它会造成翻页错位（对齐 React）
   emit('change', data.value)
 
@@ -700,6 +780,8 @@ defineExpose({
    */
   getTotal: () => table.total.value,
   getPage: () => ({ current: table.current.value, pageSize: table.pageSize.value }),
+  /** 轮询请求进行中。页面要让刷新图标单独转圈时用 */
+  getPollingLoading: () => pollingLoading.value,
   /* ---- 行内编辑 ---- */
   startEdit,
   saveRow,
@@ -707,6 +789,8 @@ defineExpose({
   removeRow,
   addRow,
   getEditingKeys: () => editingKeys.value,
+  /** 受控数据模式下手动交还数组级变更（一般不用，增删编辑已自动走） */
+  commitData: table.commitData,
 })
 </script>
 
@@ -812,8 +896,8 @@ defineExpose({
           :page-sizes="(typeof pagination === 'object' && pagination.pageSizes) || [10, 20, 50, 100]"
           :layout="(typeof pagination === 'object' && pagination.layout) || 'total, sizes, prev, pager, next, jumper'"
           background
-          @current-change="table.handlePageChange"
-          @size-change="table.handlePageSizeChange"
+          @current-change="onPageChange"
+          @size-change="onPageSizeChange"
         />
       </div>
     </div>

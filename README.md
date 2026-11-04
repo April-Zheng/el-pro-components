@@ -132,6 +132,11 @@ type ProRequest<T> = (
 | `columnOrder` | 受控列顺序（prop 数组），配合 `v-model:column-order` |
 | `columnFixed` | 受控固定列（`{ prop: 'left' \| 'right' }`），配合 `v-model:column-fixed` |
 | `paramsAdapter` | 后端参数名转换 |
+| `polling` | 轮询间隔毫秒（低于 2000 被钮到 2000），`true` 为 2000；传函数可按最新数据返回下一次间隔（返回 falsy 停止）。轮询不打断主 loading，轮询态用 `ref.getPollingLoading()` 读 |
+| `postData` | 响应数据整形：写进表格前对 `data` 做最后一道转换 |
+| `dataSource` | 受控数据模式：传入后不发请求，数据完全由外部提供；编辑/增删结果经 `update:data-source` 交还，配 `v-model:data-source` 使用 |
+
+`pagination` 对象支持：`pageSizes` / `layout`；`type: 'cursor'` 启用游标分页（请求带 `nextToken` 不带 `current`，回包的 `nextToken` 有值表示还有下一页，跳页钳制在已访问范围内）；传 `current` / `pageSize` 启用受控分页（内部翻页经 `update:pagination` 交还，配 `v-model:pagination`）。请求一次回了超过一页的数据且未报 `total` 时，自动转本地切片分页，翻页不再发请求。
 
 插槽：`#toolbar`（标题区）、`#toolbarActions`（右侧按钮）、`#batch`（批量操作）、`#empty`、`#${列的 prop}`（列自定义渲染），以及**默认插槽**（往表格里插任意 `el-table-column`）。
 
