@@ -28,13 +28,25 @@
     "schema",
     "crud"
   ],
+  "author": "April-Zheng",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/April-Zheng/el-pro-components.git"
+  },
+  "homepage": "https://github.com/April-Zheng/el-pro-components#readme",
+  "bugs": {
+    "url": "https://github.com/April-Zheng/el-pro-components/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build --mode lib",
     "build:demo": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "docs:dev": "vitepress dev docs --port 5288",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs --port 5288"
   },
   "peerDependencies": {
     "element-plus": "^2.7.0",
@@ -48,6 +60,7 @@
     "typescript": "~5.4.5",
     "vite": "^5.4.0",
     "vite-plugin-dts": "^4.0.0",
+    "vitepress": "^1.6.4",
     "vitest": "^2.1.9",
     "vue": "^3.4.0",
     "vue-tsc": "^2.1.10"

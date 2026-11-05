@@ -31,3 +31,7 @@ Thumbs.db
 .eslintcache
 node_modules/.vite
 /.scratch
+
+# VitePress
+docs/.vitepress/cache/
+docs/.vitepress/dist/

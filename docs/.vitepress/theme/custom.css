@@ -1,0 +1,51 @@
+/* 文档主题的少量补充样式 */
+/* 内容区默认 688px 太窄，表格 demo（8 列）会把「状态」这类列压成竖排。
+   放宽到 920px。默认主题的规则是
+   .VPDoc.has-aside .content-container[data-v-xxx]（优先级 0-4-0），
+   且默认主题 CSS 在自定义 CSS 之后注入——必须比它更高一级才能盖住 */
+html .VPDoc.has-aside .container .content-container,
+html .VPDoc .container .content-container {
+  max-width: 920px;
+}
+/* demo 里 EP 组件与 VitePress 主题的衔接 */
+.vp-doc .el-button {
+  font-size: inherit;
+}
+.vp-doc .el-table {
+  font-size: 13px;
+}
+.vp-doc .demo-card h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* VitePress 的 markdown 表格样式会漏进 el-table 内部（表头/表体各是一个 <table>）：
+   - .vp-doc table { display:block; margin:20px 0 } → 表头表体之间约 40px 缝隙，display:block 还会破坏 sticky 列
+   - .vp-doc tr { border-top:1px + nth-child(2n) 斑马纹 } → 行上多一条线、偶数行发灰
+   - .vp-doc th,td { border:1px solid } → 单元格多出上/左 1px 线
+   下面逐项还原成 Element Plus 的默认（.vp-doc 前缀压过 0-1-x 的漏入规则） */
+.vp-doc .el-table table {
+  display: table;
+  margin: 0;
+  overflow: visible;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.vp-doc .el-table tr {
+  border-top: none;
+  /* 不能设 transparent：EP 的 sticky 固定列是 background:inherit，从 tr 继承，
+     透明会让「操作」列的文字浮在相邻列上。用 EP 自己的 tr 背景色 */
+  background-color: var(--el-table-tr-bg-color);
+  transition: none;
+}
+.vp-doc .el-table td,
+.vp-doc .el-table th {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+/* 行分割线用回 EP 自己的变量 */
+.vp-doc .el-table td.el-table__cell,
+.vp-doc .el-table th.el-table__cell {
+  border-bottom: var(--el-table-border);
+}
