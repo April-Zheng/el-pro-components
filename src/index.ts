@@ -23,6 +23,9 @@ import ElProStatisticCard from './components/ElProCard/ElProStatisticCard.vue'
 import ElProStatisticCardGroup from './components/ElProCard/ElProStatisticCardGroup.vue'
 import CellRenderer from './fields/CellRenderer.vue'
 import FormField from './fields/FormField.vue'
+import ElProFormDependency from './components/ElProForm/ElProFormDependency.vue'
+import ElProFormCaptcha from './components/ElProForm/ElProFormCaptcha.vue'
+import ElProFieldSet from './components/ElProForm/ElProFieldSet.vue'
 
 export {
   ElProLayout,
@@ -49,6 +52,9 @@ export {
   ElProStatisticCardGroup,
   CellRenderer,
   FormField,
+  ElProFormDependency,
+  ElProFormCaptcha,
+  ElProFieldSet,
 }
 
 /* --------------------------------- 内核 --------------------------------- */

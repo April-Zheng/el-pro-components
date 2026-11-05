@@ -220,17 +220,23 @@ const stepsDirection = computed(() => (props.layout === 'vertical' ? 'vertical' 
   >
     <!-- 步骤条 -->
     <div class="el-pro-steps-form__steps" :style="{ maxWidth: layout === 'vertical' ? undefined : stepsMaxWidth }">
-      <ElSteps :direction="stepsDirection" :active="step" v-bind="stepsProps">
-        <ElStep
-          v-for="(s, i) in steps"
-          :key="stepName(s, i)"
-          :title="s.title"
-          :description="s.description"
-          :class="{ 'is-selectable': allowStepSelect }"
-          v-bind="s.stepProps"
-          @click="allowStepSelect && setStep(i)"
-        />
-      </ElSteps>
+      <!--
+        #steps 插槽：完全接管步骤条（对齐 React 的 stepsRender）。
+        作用域：{ step: 当前步下标, steps: 步骤配置, setStep: 跳步函数 }
+      -->
+      <slot name="steps" :step="step" :steps="steps" :set-step="setStep">
+        <ElSteps :direction="stepsDirection" :active="step" v-bind="stepsProps">
+          <ElStep
+            v-for="(s, i) in steps"
+            :key="stepName(s, i)"
+            :title="s.title"
+            :description="s.description"
+            :class="{ 'is-selectable': allowStepSelect }"
+            v-bind="s.stepProps"
+            @click="allowStepSelect && setStep(i)"
+          />
+        </ElSteps>
+      </slot>
     </div>
 
     <!-- 各步表单：常驻挂载，v-show 切换（源码同款，跨步状态保留） -->
@@ -242,15 +248,18 @@ const stepsDirection = computed(() => (props.layout === 'vertical' ? 'vertical' 
         class="el-pro-steps-form__step"
         :class="{ 'el-pro-steps-form__step--active': step === i }"
       >
-        <ElProForm
-          :ref="(el: any) => setFormRef(el, i)"
-          :columns="s.columns"
-          :model="modelOf(s, i)"
-          :show-actions="false"
-          v-bind="formProps"
-          :span="s.span ?? formProps?.span"
-          @submit="onStepSubmit(i)"
-        />
+        <!-- #stepForm 插槽：包裹每一步的表单（对齐 React 的 stepFormRender） -->
+        <slot name="stepForm" :step="s" :index="i" :active="step === i">
+          <ElProForm
+            :ref="(el: any) => setFormRef(el, i)"
+            :columns="s.columns"
+            :model="modelOf(s, i)"
+            :show-actions="false"
+            v-bind="formProps"
+            :span="s.span ?? formProps?.span"
+            @submit="onStepSubmit(i)"
+          />
+        </slot>
       </div>
 
       <!-- 底部按钮 -->

@@ -11,6 +11,7 @@
 import { computed, onMounted, toRaw, watch } from 'vue'
 import { ElButton, ElCol, ElFormItem, ElRow } from 'element-plus'
 import FormField from '../../fields/FormField.vue'
+import { resolveFormColumns } from '../../core/formDependency'
 import type { ProColumn, ProFormListConfig } from '../../types'
 
 defineOptions({ name: 'ProFormList' })
@@ -80,19 +81,88 @@ function normalize() {
   arr.forEach(ensureKey)
 }
 
-onMounted(normalize)
+onMounted(() => {
+  normalize()
+  bindActionRef()
+})
 // 整个 model 被换掉时（弹窗重新播种、详情切记录）也要重新收拾一遍
 watch(() => props.model[props.prop], normalize, { flush: 'post' })
 watch(min, normalize, { flush: 'post' })
 
 function add() {
   if (!canAdd.value) return
-  list.value.push(createItem(list.value.length))
+  return runGuardedAdd()
 }
 
-function remove(index: number) {
-  if (!canRemove.value) return
+async function runGuardedAdd() {
+  if (!canAdd.value) return false
+  const guard = props.config?.actionGuard?.beforeAddRow
+  if (guard) {
+    const ok = await guard([...list.value])
+    if (ok === false) return false
+  }
+  const row = createItem(list.value.length)
+  list.value.push(row)
+  props.config?.onAfterAdd?.(row, [...list.value])
+  return true
+}
+
+async function remove(index: number) {
+  if (!canRemove.value) return false
+  const guard = props.config?.actionGuard?.beforeRemoveRow
+  if (guard) {
+    const ok = await guard(index, [...list.value])
+    if (ok === false) return false
+  }
   list.value.splice(index, 1)
+  props.config?.onAfterRemove?.(index, [...list.value])
+  return true
+}
+
+/** 把 from 位置的行移到 to 位置（上下移动与任意换位共用） */
+function move(from: number, to: number) {
+  const arr = list.value
+  if (from < 0 || from >= arr.length || to < 0 || to >= arr.length || from === to) return
+  const [moved] = arr.splice(from, 1)
+  arr.splice(to, 0, moved)
+}
+
+function moveUp(index: number) {
+  move(index, index - 1)
+}
+
+function moveDown(index: number) {
+  move(index, index + 1)
+}
+
+function getRow(index: number) {
+  return list.value[index]
+}
+
+function getList() {
+  return [...list.value]
+}
+
+/**
+ * 行操作 API。两种用法：
+ * 1. schema 模式：formListProps.actionRef 传 `{ current: null }`，挂载后取 `current` 上的方法；
+ * 2. 组件模式：模板 ref 直接调（defineExpose 同一组方法）。
+ */
+const actionApi = {
+  add: runGuardedAdd,
+  remove,
+  move,
+  moveUp,
+  moveDown,
+  get: getRow,
+  getList,
+}
+
+defineExpose(actionApi)
+
+function bindActionRef() {
+  const ref = props.config?.actionRef
+  if (ref) ref.current = actionApi
 }
 
 /** 复制一项：插在它后面，键重新发，否则两行的 v-for key 会撞上 */
@@ -113,6 +183,14 @@ function copy(index: number) {
 function itemTitle(item: Record<string, any>, index: number) {
   return props.config?.itemTitle?.(item, index) ?? `第 ${index + 1} 项`
 }
+
+/**
+ * 行内相对依赖：子列的 dependsOn/visible 按当前行的值解析，
+ * 而不是外层 model —— 与 React List 里 ProFormDependency 的行内语义一致。
+ */
+function rowColumns(item: ListRow) {
+  return resolveFormColumns(props.columns, item as Record<string, any>)
+}
 </script>
 
 <template>
@@ -121,6 +199,24 @@ function itemTitle(item: Record<string, any>, index: number) {
       <div class="el-pro-form-list__header">
         <span class="el-pro-form-list__title">{{ itemTitle(item, index) }}</span>
         <span class="el-pro-form-list__actions">
+          <template v-if="config?.arrowSort">
+            <ElButton
+              link
+              class="el-pro-form-list__move"
+              :disabled="index === 0"
+              @click="moveUp(index)"
+            >
+              上移
+            </ElButton>
+            <ElButton
+              link
+              class="el-pro-form-list__move"
+              :disabled="index === list.length - 1"
+              @click="moveDown(index)"
+            >
+              下移
+            </ElButton>
+          </template>
           <ElButton
             v-if="config?.copyable"
             link
@@ -143,7 +239,7 @@ function itemTitle(item: Record<string, any>, index: number) {
       </div>
 
       <ElRow :gutter="gutter">
-        <ElCol v-for="col in columns" :key="col.prop" :span="col.formSpan ?? span">
+        <ElCol v-for="col in rowColumns(item)" :key="col.prop" :span="col.formSpan ?? span">
           <ElFormItem
             :label="col.label"
             :prop="`${prop}.${index}.${col.prop}`"

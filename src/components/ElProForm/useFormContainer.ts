@@ -137,9 +137,13 @@ export function useFormContainer(props: ProFormContainerProps, events: FormConta
 
     submitting.value = true
     try {
-      // 真值才关窗（对齐 React 与 ElProStepsForm）：返回 false 可留在窗内做二次确认
-      const result = await props.onFinish?.(formModel.value)
-      if (result) closeDialog()
+      // 真值才关窗（对齐 React 与 ElProStepsForm）：返回 false 可留在窗内做二次确认。
+      // submitTimeout：onFinish 挂死超过时限就恢复按钮、允许取消，迟到的 resolve 忽略
+      const pending = Promise.resolve(props.onFinish?.(formModel.value))
+      const result = props.submitTimeout
+        ? await Promise.race([pending, new Promise((r) => setTimeout(() => r('timeout'), props.submitTimeout))])
+        : await pending
+      if (result && result !== 'timeout') closeDialog()
     } catch (error) {
       events.onFinishError(error)
     } finally {

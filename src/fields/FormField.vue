@@ -31,11 +31,14 @@ import {
 } from 'element-plus'
 import type { ProColumn } from '../types'
 import { enumToOptions } from '../core/valueType'
+import CellRenderer from './CellRenderer.vue'
 
 const props = defineProps<{
   modelValue: any
   column: ProColumn
   mode?: 'search' | 'form'
+  /** 表单级只读：字段渲染为只读展示而非禁用输入 */
+  formReadonly?: boolean
 }>()
 
 const emit = defineEmits<{ 'update:modelValue': [any] }>()
@@ -62,6 +65,14 @@ const mergedProps = computed(() => {
   if (props.column.readonly !== undefined) base.disabled = props.column.readonly
   return base
 })
+
+/**
+ * 只读展示形态：列级 readonly 或表单级 readonly 都渲染成纯展示（与 CellRenderer 同一套
+ * valueType 词汇），而不是禁用的输入框——对齐 React 的 EditOrReadOnlyContext mode='read'。
+ */
+const isReadonlyDisplay = computed(
+  () => props.mode === 'form' && (props.formReadonly === true || props.column.readonly === true),
+)
 
 const options = computed(() => enumToOptions(props.column.valueEnum, true))
 
@@ -194,10 +205,17 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
 </script>
 
 <template>
+  <!-- 只读展示形态：与表格同一套 valueType 渲染 -->
+  <CellRenderer
+    v-if="isReadonlyDisplay"
+    :value="modelValue"
+    :column="column"
+  />
+
   <!-- 自定义控件优先级最高 -->
   <component
     :is="column.fieldComponent"
-    v-if="column.fieldComponent"
+    v-else-if="column.fieldComponent"
     v-model="value"
     :column="column"
     :mode="mode"

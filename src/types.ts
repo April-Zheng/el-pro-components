@@ -362,6 +362,23 @@ export interface ProFormContainerProps {
   cancelText?: string
   /** 外部已知的提交中状态，会和内部状态一起控制按钮 loading */
   loading?: boolean
+  /**
+   * 提交超时保护（毫秒）。onFinish 超过这个时间没 resolve 就恢复按钮、允许取消，
+   * 避免接口挂死把窗「锁死」；迟到的 resolve 会被忽略。不传则一直等
+   */
+  submitTimeout?: number
+
+  /* ----- 透传给 ElProForm 的进阶能力 ----- */
+  /** 表单级只读：字段渲染为只读展示而非禁用输入 */
+  readonly?: boolean
+  /** 回车提交。默认关（对齐 React），开启后表单内回车触发校验提交 */
+  isKeyPressSubmit?: boolean
+  /** 异步初值：挂载时调用，resolve 的对象会合并进 model */
+  request?: (params?: Record<string, any>) => Promise<Record<string, any>>
+  /** request 的参数 */
+  params?: Record<string, any>
+  /** 字段值变化（deep）。程序化 setFieldsValue 不触发 */
+  onValuesChange?: (values: Record<string, any>) => void
 
   /**
    * 校验通过后调用。**只有它 resolve 才关窗**；reject 就留在原地、
@@ -472,6 +489,26 @@ export interface ProFormListConfig {
   span?: number
   /** 每项内部的栅格间距 @default 16 */
   gutter?: number
+  /** 是否显示上移/下移按钮 @default false */
+  arrowSort?: boolean
+  /**
+   * 行操作闸门：返回 false（或 reject）则本次操作不执行。
+   * beforeAddRow 拿到当前列表；beforeRemoveRow 拿到待删下标与列表
+   */
+  actionGuard?: {
+    beforeAddRow?: (list: Record<string, any>[]) => boolean | void | Promise<boolean | void>
+    beforeRemoveRow?: (index: number, list: Record<string, any>[]) => boolean | void | Promise<boolean | void>
+  }
+  /** 新增完成后的回调（含 creator 生成的行） */
+  onAfterAdd?: (row: Record<string, any>, list: Record<string, any>[]) => void
+  /** 删除完成后的回调 */
+  onAfterRemove?: (index: number, list: Record<string, any>[]) => void
+  /**
+   * 行操作 API 的挂载点（对齐 React 的 actionRef）。
+   * 传 `{ current: null }` 进来，挂载后 `current` 上就有
+   * add / remove / move / moveUp / moveDown / get / getList。
+   */
+  actionRef?: { current: any }
 }
 
 /**
@@ -828,6 +865,8 @@ export interface ProColumn<T = any> {
   hideInTable?: boolean
   hideInForm?: boolean
   hideInDescriptions?: boolean
+  /** 表单/描述里的排位，越小越靠前。未传的排在传了的后面，保持原有相对顺序 */
+  order?: number
   /** 不出现在列设置面板里 */
   hideInSetting?: boolean
   /** 列设置面板里禁止勾选取消（如操作列） */
