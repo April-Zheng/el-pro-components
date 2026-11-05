@@ -53,7 +53,7 @@ const formColumns: ProColumn[] = [
       dependsOn: ['billingType'],
       resolve: (values) =>
         values.billingType === 'custom'
-          ? { label: '预算封顶', readonly: true }
+          ? { label: '预算封顶', fieldProps: { disabled: true } }
           : { label: '预算（固定价）' },
     },
   },

@@ -314,6 +314,8 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
 
   switch (valueType) {
     case 'money': {
+      // 空值直接进占位（'-'），不能渲染成孤零零的「¥」——那在只读展示里几乎不可见
+      if (value === null || value === undefined || value === '') return empty()
       // 符号与精度可配（对齐 React Money）：customSymbol > moneySymbol（false 关、字符串换币种）> 默认 ¥；
       // valueFormat 优先于 precision 数字
       const fp = (opts.fieldProps ?? {}) as {
@@ -331,6 +333,7 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
     }
     case 'number':
     case 'slider':
+      if (value === null || value === undefined || value === '') return empty()
       return { kind: 'text', text: formatNumber(value, valueFormat, 0), raw: value }
     case 'digitRange': {
       if (!Array.isArray(value) || value.length < 2) {
@@ -348,9 +351,11 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
       return { kind: 'text', text: `${from} ~ ${to}`, raw: value }
     }
     case 'second':
+      if (value === null || value === undefined || value === '') return empty()
       return { kind: 'text', text: formatSecond(value), raw: value }
     case 'percent': {
-      // 对齐 React Percent：默认 2 位小数；showSymbol 正数加 +；showColor 红涨绿跌
+      // 对齐 React Percent：默认 2 位小数；showSymbol 正数加 +；showColor 红涨绿跌；空值进占位
+      if (value === null || value === undefined || value === '') return empty()
       const fp = (opts.fieldProps ?? {}) as {
         precision?: number
         showSymbol?: boolean
