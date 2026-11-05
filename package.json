@@ -15,7 +15,8 @@
       "import": "./dist/el-pro.js",
       "require": "./dist/el-pro.umd.cjs"
     },
-    "./style.css": "./dist/el-pro.css"
+    "./style.css": "./dist/el-pro.css",
+    "./package.json": "./package.json"
   },
   "sideEffects": [
     "**/*.css"
@@ -28,6 +29,7 @@
     "schema",
     "crud"
   ],
+  "license": "MIT",
   "author": "April-Zheng",
   "repository": {
     "type": "git",
@@ -44,12 +46,13 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "vue-tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
     "docs:dev": "vitepress dev docs --port 5288",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs --port 5288"
   },
   "peerDependencies": {
-    "element-plus": "^2.7.0",
+    "element-plus": "^2.8.0",
     "vue": "^3.3.0"
   },
   "devDependencies": {
