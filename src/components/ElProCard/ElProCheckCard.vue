@@ -35,6 +35,10 @@ const props = withDefaults(
     size?: 'default' | 'small'
     disabled?: boolean
     loading?: boolean
+    /** 幽灵态：去背景与边框，仅保留选中描边 */
+    ghost?: boolean
+    /** 卡片内联样式（间距/宽度等定制点） */
+    bodyStyle?: Record<string, any>
   }>(),
   {
     size: 'default',
@@ -74,7 +78,9 @@ function handleClick() {
       'is-checked': isChecked,
       'is-disabled': isDisabled,
       'is-small': size === 'small',
+      'is-ghost': ghost,
     }"
+    :style="bodyStyle"
     role="checkbox"
     :aria-checked="isChecked"
     :aria-disabled="isDisabled"
@@ -129,6 +135,11 @@ function handleClick() {
         <path d="M3.5 8.5l3 3 6-7" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </span>
+
+    <!-- 底部操作区 -->
+    <div v-if="$slots.actions" class="el-pro-check-card__actions" @click.stop>
+      <slot name="actions" :checked="isChecked" />
+    </div>
   </div>
 </template>
 
@@ -251,5 +262,17 @@ function handleClick() {
   border-radius: var(--el-border-radius-base, 4px) 0 var(--el-border-radius-base, 4px) 0;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
   box-sizing: border-box;
+}
+.el-pro-check-card__actions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+.el-pro-check-card.is-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+}
+.el-pro-check-card.is-ghost.is-checked {
+  border-color: var(--el-color-primary);
 }
 </style>

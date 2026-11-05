@@ -26,6 +26,7 @@ import FormField from './fields/FormField.vue'
 import ElProFormDependency from './components/ElProForm/ElProFormDependency.vue'
 import ElProFormCaptcha from './components/ElProForm/ElProFormCaptcha.vue'
 import ElProFieldSet from './components/ElProForm/ElProFieldSet.vue'
+import ElProCardDivider from './components/ElProCard/ElProCardDivider.vue'
 
 export {
   ElProLayout,
@@ -55,6 +56,7 @@ export {
   ElProFormDependency,
   ElProFormCaptcha,
   ElProFieldSet,
+  ElProCardDivider,
 }
 
 /* --------------------------------- 内核 --------------------------------- */

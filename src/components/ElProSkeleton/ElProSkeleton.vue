@@ -24,6 +24,12 @@ const props = withDefaults(
     active?: boolean
     /** 列表版式是否带头像 */
     avatar?: boolean
+    /** 页面级组合：顶部渲染页头骨架（标题行 + 面包屑位） */
+    pageHeader?: boolean
+    /** 页面级组合：顶部渲染几个指标卡骨架 */
+    statistic?: number
+    /** 页面级组合：正文前渲染工具栏骨架（按钮位） */
+    toolbar?: boolean
   }>(),
   {
     type: 'list',
@@ -48,6 +54,23 @@ const barWidth = (i: number) => `${Math.round(WIDTHS[i % WIDTHS.length] * 100)}%
 
 <template>
   <div class="el-pro-skeleton" :class="{ 'is-active': active }">
+    <!-- 页面级组合：页头 -->
+    <div v-if="pageHeader" class="el-pro-skeleton__page-header">
+      <div class="el-pro-skeleton__bar is-heading" />
+      <div class="el-pro-skeleton__bar is-thin" style="width: 36%" />
+    </div>
+
+    <!-- 页面级组合：指标卡 -->
+    <div v-if="statistic" class="el-pro-skeleton__page-statistic">
+      <div v-for="i in Math.max(1, statistic)" :key="i" class="el-pro-skeleton__block" />
+    </div>
+
+    <!-- 页面级组合：工具栏 -->
+    <div v-if="toolbar" class="el-pro-skeleton__page-toolbar">
+      <div class="el-pro-skeleton__bar is-thin" style="width: 180px" />
+      <div class="el-pro-skeleton__result-btn" />
+    </div>
+
     <!-- 列表：头像 + 两行文字 -->
     <div v-if="type === 'list'" class="el-pro-skeleton__list">
       <div v-for="i in rowList" :key="i" class="el-pro-skeleton__list-item">
@@ -254,5 +277,26 @@ const barWidth = (i: number) => `${Math.round(WIDTHS[i % WIDTHS.length] * 100)}%
   width: 88px;
   height: 32px;
   border-radius: 4px;
+}
+
+/* ---- 页面级组合 ---- */
+.el-pro-skeleton__page-header {
+  padding: 4px 0 14px;
+}
+.el-pro-skeleton__page-statistic {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding-bottom: 14px;
+}
+.el-pro-skeleton__page-statistic .el-pro-skeleton__block {
+  height: 96px;
+}
+.el-pro-skeleton__page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
 }
 </style>

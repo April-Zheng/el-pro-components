@@ -22,17 +22,26 @@ const props = withDefaults(
     modelValue?: any
     multiple?: boolean
     disabled?: boolean
-    options?: ProCheckCardOption[]
+    options?: (ProCheckCardOption | string)[]
     /** 每行几个。传 0 用 auto-fit 自适应 */
     column?: number
     /** 卡片间距 */
     gutter?: number
+    /** 组级 loading：按 column 数渲染骨架卡片占位 */
+    loading?: boolean
+    /** 组级边框 */
+    bordered?: boolean
+    /** 组级尺寸。large 时卡片内边距与字号放大 */
+    size?: 'default' | 'large'
   }>(),
   {
     multiple: false,
     disabled: false,
     column: 3,
     gutter: 16,
+    loading: false,
+    bordered: false,
+    size: 'default',
   },
 )
 
@@ -78,13 +87,26 @@ const gridStyle = computed(() => ({
   gridTemplateColumns: props.column > 0 ? `repeat(${props.column}, minmax(0, 1fr))` : 'repeat(auto-fit, minmax(200px, 1fr))',
   gap: `${props.gutter}px`,
 }))
+
+/** string 选项自动转卡片选项（label 用字符串本身） */
+const normalizedOptions = computed(() =>
+  (props.options ?? []).map((o) => (typeof o === 'string' ? { value: o, title: o } : o)),
+)
 </script>
 
 <template>
-  <div class="el-pro-check-card-group" :style="gridStyle">
-    <slot>
+  <div
+    class="el-pro-check-card-group"
+    :class="{ 'is-bordered': bordered, 'is-large': size === 'large' }"
+    :style="gridStyle"
+  >
+    <!-- 组级 loading：铺骨架卡片占位 -->
+    <template v-if="loading">
+      <ElProCheckCard v-for="i in Math.max(column, 1)" :key="i" :value="`__loading_${i}`" loading />
+    </template>
+    <slot v-else>
       <ElProCheckCard
-        v-for="opt in options"
+        v-for="opt in normalizedOptions"
         :key="opt.value"
         :value="opt.value"
         :title="opt.title"
@@ -103,5 +125,16 @@ const gridStyle = computed(() => ({
 .el-pro-check-card-group {
   display: grid;
   align-items: stretch;
+}
+.el-pro-check-card-group.is-bordered {
+  padding: 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+.el-pro-check-card-group.is-large .el-pro-check-card {
+  padding: 24px;
+}
+.el-pro-check-card-group.is-large .el-pro-check-card .el-pro-check-card__title {
+  font-size: 16px;
 }
 </style>

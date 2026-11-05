@@ -49,6 +49,23 @@ const props = withDefaults(
     loading?: boolean
     immediate?: boolean
     emptyText?: string
+    /** 行选择：条目左侧出现勾选框，配 v-model:selected-keys */
+    selection?: boolean
+    /** 受控选中 key 列表 */
+    selectedKeys?: (string | number)[]
+    /** 展开行：条目标题旁出现展开箭头，内容用 #expanded-row-render 插槽 */
+    expandable?: boolean
+    /** 受控展开 key 列表，配 v-model:expanded-keys */
+    expandedKeys?: (string | number)[]
+    /** 操作区显示时机。'hover' 时悬浮条目才出现 @default 'always' */
+    showActions?: 'always' | 'hover'
+    /** extra 区显示时机 @default 'always' */
+    showExtra?: 'always' | 'hover'
+    /**
+     * 加载更多：传了就不渲染分页，底部出现「加载更多」按钮。
+     * 前提是调用方自己往 dataSource 里追数据
+     */
+    loadMore?: () => Promise<void>
   }>(),
   {
     columns: () => [],
@@ -68,6 +85,10 @@ const emit = defineEmits<{
   'item-click': [any, number]
   load: [any[]]
   error: [Error]
+  'update:selectedKeys': [(string | number)[]]
+  'selection-change': [any[]]
+  'update:expandedKeys': [(string | number)[]]
+  'expand-change': [string | number, boolean]
 }>()
 
 const slots = useSlots()
@@ -209,6 +230,60 @@ const gridStyle = computed(() => {
 const cardProps = { hoverable: true, type: 'inner' as const }
 
 const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
+
+/* ------------------------------ 行选择 / 展开行 / 加载更多 ------------------------------ */
+
+const innerSelectedKeys = ref<(string | number)[]>([])
+const selectedKeys = computed<(string | number)[]>(() => props.selectedKeys ?? innerSelectedKeys.value)
+
+function isSelected(item: any) {
+  return selectedKeys.value.includes(itemKey(item, 0))
+}
+
+function toggleSelect(item: any) {
+  const key = itemKey(item, 0)
+  const next = isSelected(item)
+    ? selectedKeys.value.filter((k) => k !== key)
+    : [...selectedKeys.value, key]
+  innerSelectedKeys.value = next
+  emit('update:selectedKeys', next)
+  const selected = items.value.filter((it) => next.includes(itemKey(it, 0)))
+  emit('selection-change', selected)
+}
+
+function clearSelection() {
+  innerSelectedKeys.value = []
+  emit('update:selectedKeys', [])
+  emit('selection-change', [])
+}
+
+const innerExpandedKeys = ref<(string | number)[]>([])
+const expandedKeys = computed<(string | number)[]>(() => props.expandedKeys ?? innerExpandedKeys.value)
+
+function isExpanded(item: any) {
+  return expandedKeys.value.includes(itemKey(item, 0))
+}
+
+function toggleExpand(item: any) {
+  const key = itemKey(item, 0)
+  const next = isExpanded(item)
+    ? expandedKeys.value.filter((k) => k !== key)
+    : [...expandedKeys.value, key]
+  innerExpandedKeys.value = next
+  emit('update:expandedKeys', next)
+  emit('expand-change', key, next.includes(key))
+}
+
+const loadMoreLoading = ref(false)
+async function onLoadMore() {
+  if (!props.loadMore || loadMoreLoading.value) return
+  loadMoreLoading.value = true
+  try {
+    await props.loadMore()
+  } finally {
+    loadMoreLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -229,6 +304,16 @@ const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
           @click="emit('item-click', item, index)"
         >
           <div class="el-pro-list__inner" :class="itemLayout === 'vertical' ? 'is-vertical' : 'is-horizontal'">
+            <!-- 行选择勾选框 -->
+            <div v-if="selection" class="el-pro-list__selection" @click.stop>
+              <input
+                type="checkbox"
+                class="el-pro-list__checkbox"
+                :checked="isSelected(item)"
+                @change="toggleSelect(item)"
+              />
+            </div>
+
             <div v-if="grouped.avatar.length" class="el-pro-list__avatar">
               <component
                 :is="Cell"
@@ -253,6 +338,19 @@ const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
                     :item="item"
                     :index="index"
                   />
+                  <!-- 展开箭头 -->
+                  <button
+                    v-if="expandable"
+                    type="button"
+                    class="el-pro-list__expand"
+                    :class="{ 'is-open': isExpanded(item) }"
+                    :aria-expanded="isExpanded(item)"
+                    @click.stop="toggleExpand(item)"
+                  >
+                    <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M2.5 4.5L6 8l3.5-3.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </button>
                 </div>
                 <div v-if="grouped.subTitle.length" class="el-pro-list__subtitle">
                   <component
@@ -277,7 +375,7 @@ const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
                 <div v-for="col in grouped.content" :key="col.prop" class="el-pro-list__content-cell">
                   <component :is="Cell" :col="col" :item="item" :index="index" />
                 </div>
-                <div v-if="grouped.actions.length || $slots.actions" class="el-pro-list__actions" @click.stop>
+                <div v-if="grouped.actions.length || $slots.actions" class="el-pro-list__actions" :class="showActions === 'hover' ? 'is-hover' : ''" @click.stop>
                   <slot name="actions" :item="item" :index="index">
                     <component
                       :is="Cell"
@@ -289,10 +387,19 @@ const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
                     />
                   </slot>
                 </div>
+
+                <!-- 展开行内容 -->
+                <div v-if="expandable && isExpanded(item)" class="el-pro-list__expanded" @click.stop>
+                  <slot name="expanded-row-render" :item="item" :index="index" />
+                </div>
               </template>
             </div>
 
-            <div v-if="grouped.extra.length" class="el-pro-list__extra">
+            <div
+              v-if="grouped.extra.length"
+              class="el-pro-list__extra"
+              :class="showExtra === 'hover' ? 'is-hover' : ''"
+            >
               <component
                 :is="Cell"
                 v-for="col in grouped.extra"
@@ -321,7 +428,13 @@ const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
       </div>
     </div>
 
-    <div v-if="pagination !== false && totalCount > 0" class="el-pro-list__footer">
+    <div v-if="loadMore && items.length" class="el-pro-list__footer el-pro-list__load-more">
+      <button type="button" class="el-pro-list__load-more-btn" :disabled="loadMoreLoading" @click="onLoadMore">
+        {{ loadMoreLoading ? '加载中…' : '加载更多' }}
+      </button>
+    </div>
+
+    <div v-else-if="pagination !== false && totalCount > 0" class="el-pro-list__footer">
       <ElPagination
         :current-page="current"
         :page-size="pageSize"
@@ -487,6 +600,69 @@ const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
 .el-pro-list__footer-extra {
   padding: 12px 16px;
   border-top: 1px solid var(--el-pro-list-split);
+}
+.el-pro-list__selection {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+.el-pro-list__checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--el-color-primary);
+  cursor: pointer;
+}
+.el-pro-list__expand {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.el-pro-list__expand.is-open {
+  transform: rotate(180deg);
+}
+.el-pro-list__expanded {
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: var(--el-fill-color-lighter, #fafafa);
+  border-radius: 4px;
+  font-size: 13px;
+}
+/* hover 显示的操作区 / extra 区 */
+.el-pro-list__actions.is-hover {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.el-pro-list__entry:hover .el-pro-list__actions.is-hover {
+  opacity: 1;
+}
+.el-pro-list__extra.is-hover {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.el-pro-list__entry:hover .el-pro-list__extra.is-hover {
+  opacity: 1;
+}
+.el-pro-list__load-more {
+  justify-content: center;
+}
+.el-pro-list__load-more-btn {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: var(--el-color-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.el-pro-list__load-more-btn:disabled {
+  color: var(--el-text-color-placeholder);
+  cursor: not-allowed;
 }
 .el-pro-list__entry.is-card {
   height: 100%;

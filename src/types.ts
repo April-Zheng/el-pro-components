@@ -885,6 +885,8 @@ export interface ProColumn<T = any> {
   formSpan?: number
   /** 同值单元格纵向自动合并。配合 ElProTable 的 mergeFields 使用；树形数据下自动跳过 */
   autoMerge?: boolean
+  /** 详情页（Descriptions）label 旁的问号提示 */
+  labelTooltip?: string
   /** 表单/搜索栏里禁用 */
   readonly?: boolean
   /** 透传给输入控件的 props（搜索模式下会被 search.props 覆盖） */

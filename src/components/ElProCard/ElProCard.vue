@@ -64,6 +64,8 @@ const props = withDefaults(
     split?: 'vertical' | 'horizontal'
     /** body 的 flex 方向。不给时由 split 决定 */
     direction?: 'row' | 'column'
+    /** 内容居中（图标+文案的空态卡、入口卡常用） */
+    layout?: 'default' | 'center'
     /** 子卡是否可以换行 */
     wrap?: boolean
     /** 子卡间距。支持 16 / [16, 8] / { xs: 8, lg: 16 } */
@@ -267,6 +269,7 @@ const rootClass = computed(() => ({
   'is-split-vertical': hasChild.value && props.split === 'vertical',
   'is-split-horizontal': hasChild.value && props.split === 'horizontal',
   'is-tabs': !!props.tabs?.length,
+  'is-center': props.layout === 'center',
 }))
 
 const hasHeader = computed<boolean>(
@@ -572,5 +575,13 @@ defineExpose({ toggleCollapsed, setCollapsed })
 }
 .el-pro-card__tab-body {
   padding: var(--el-pro-card-padding);
+}
+.el-pro-card.is-center > .el-pro-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  text-align: center;
 }
 </style>

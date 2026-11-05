@@ -64,6 +64,11 @@ const asRenderable = (node: any) => (typeof node === 'function' ? node : () => n
         <component :is="asRenderable(footer)" />
       </slot>
     </div>
+
+    <!-- 右侧操作区（对齐 React StatisticCard.Operation）：竖排一列动作，常配 Divider -->
+    <div v-if="$slots.actions" class="el-pro-statistic-card__actions">
+      <slot name="actions" />
+    </div>
   </ElProCard>
 </template>
 
@@ -99,5 +104,23 @@ const asRenderable = (node: any) => (typeof node === 'function' ? node : () => n
   border-top: 1px solid var(--el-pro-card-border, var(--el-border-color-lighter, #ebeef5));
   font-size: 13px;
   color: var(--el-text-color-secondary, #909399);
+}
+.el-pro-statistic-card__actions {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--el-pro-card-border, var(--el-border-color-lighter, #ebeef5));
+}
+/* 卡片 body 已是 flex column，操作区放右侧需要整体转横排 */
+.el-pro-statistic-card:has(.el-pro-statistic-card__actions) > .el-pro-card__body {
+  flex-direction: row;
+  align-items: center;
+}
+.el-pro-statistic-card:has(.el-pro-statistic-card__actions) > .el-pro-card__body > :first-child {
+  flex: 1;
+  min-width: 0;
 }
 </style>
