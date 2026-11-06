@@ -53,6 +53,7 @@
 | 方法 | 说明 |
 | --- | --- |
 | `getAllFieldsValue()` | 合并所有步当前值（含没提交过的步） |
-| `setCurrentStep(i)` / `getCurrentStep()` | 跳步（不校验）/ 读当前步 |
+| `setCurrentStep(i)` | 跳到第 i 步（不触发校验） |
+| `getCurrentStep()` | 读当前步下标 |
 | `getStepFormInstance(i)` | 拿某一步的表单实例 |
 | `resetSteps()` | 重置所有步 |

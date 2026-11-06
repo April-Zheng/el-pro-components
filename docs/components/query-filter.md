@@ -43,11 +43,21 @@
 | gutter | 栅格间距 | `number` | `16` |
 | split | 行间分割线，只在 `labelPosition: 'top'` 时生效 | `boolean` | `false` |
 
-### 事件与实例方法
+### 事件
 
-| 名称 | 说明 |
+| 事件 | 说明 | 回调参数 |
+| --- | --- | --- |
+| search | 点查询时触发 | `(values)`，当前值快照 |
+| reset | 重置后触发 | `(values)`，重置后的快照 |
+| collapse-change | 折叠状态变化，配 `v-model:collapsed` | `(collapsed: boolean)` |
+
+### 实例方法
+
+| 方法 | 说明 |
 | --- | --- |
-| `@search(values)` / `@reset(values)` | 查询 / 重置，`values` 是快照 |
-| `@collapse-change` | 折叠状态变化 |
-| `search()` / `reset()` / `getValues()` / `validate()` | 实例方法 |
-| `collapse()` / `expand()` | 折叠 / 展开 |
+| `search()` | 触发查询 |
+| `reset()` | 重置回 initialValues 基准 |
+| `getValues()` | 读当前筛选值 |
+| `validate()` | 校验全部字段 |
+| `collapse()` | 折叠 |
+| `expand()` | 展开 |

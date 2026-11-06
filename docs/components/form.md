@@ -69,9 +69,21 @@
 | title | 分组标题，默认取列的 `label` | `string` | — |
 | tooltip | 标题旁问号提示 | `string` | — |
 
-### 事件与实例方法
+### 事件
 
-| 名称 | 说明 |
+| 事件 | 说明 | 回调参数 |
+| --- | --- | --- |
+| submit | 校验通过后触发；回调返回 `true` 时自动 `reset()` | `(values)` |
+| reset | 重置后触发 | `(values)` |
+| invalid | 校验没过时触发 | — |
+| valuesChange | 字段值变化（deep） | `(values)` |
+| init | 首次挂载后触发一次（request 初值写入之后） | `(values)` |
+
+### 实例方法
+
+| 方法 | 说明 |
 | --- | --- |
-| `@submit(values)` | 校验通过后触发；回调返回 `true` 时自动 `reset()` |
-| `validate()` / `reset()` / `clearValidate()` / `submit()` | 实例方法。注意是 **`reset` 不是 `resetFields`**——可选链写错方法名会被静默吞掉 |
+| `validate()` | 校验整个表单，返回 Promise |
+| `reset()` | 重置为初始值。注意是 **`reset` 不是 `resetFields`**——可选链写错方法名会被静默吞掉 |
+| `clearValidate()` | 清除校验提示 |
+| `submit()` | 触发提交（等价点提交按钮） |

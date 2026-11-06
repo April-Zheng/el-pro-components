@@ -39,7 +39,8 @@
 
 ### 事件
 
-| 事件 | 说明 |
-| --- | --- |
-| select | 菜单点击（`index` 为菜单 path） |
-| update:collapsed | 折叠变化 |
+| 事件 | 说明 | 回调参数 |
+| --- | --- | --- |
+| select | 菜单点击 | `(path: string)`，即菜单 path |
+| update:collapsed | 折叠变化，配 `v-model:collapsed` | `(collapsed: boolean)` |
+| collapsedChange | 折叠变化（只需要监听、不需要双向绑定时用） | `(collapsed: boolean)` |

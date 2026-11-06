@@ -43,11 +43,21 @@
 | loading | 外部已知的提交中状态，和内部状态一起控制按钮 loading | `boolean` | `false` |
 | width | 弹窗宽度（DrawerForm 用 `drawerSize`——`size` 是**表单控件尺寸**，两个 size 混用会改半天没反应） | `string \| number` | — |
 
-### 事件与实例方法
+### 事件
 
-| 名称 | 说明 |
+| 事件 | 说明 | 回调参数 |
+| --- | --- | --- |
+| finish | 校验通过后触发，同 `onFinish` | `(values)` |
+| finish-error | `onFinish` 抛错时；想弹 toast 还是画在弹窗里都行 | `(err: Error)` |
+| cancel | 点取消或右上角关闭时触发 | — |
+| open-change | 开关状态变化 | `(open: boolean)` |
+| invalid | 校验没过 | — |
+
+### 实例方法
+
+| 方法 | 说明 |
 | --- | --- |
-| `@finish(values)` | 校验通过后触发，同 `onFinish` |
-| `@finish-error(err)` | `onFinish` 抛错时；想弹 toast 还是画在弹窗里都行 |
-| `@cancel` / `@open-change` / `@invalid` | 取消 / 开关变化 / 校验没过 |
-| `open()` / `close()` / `submit()` / `getValues()` | 实例方法 |
+| `open()` | 打开弹窗 |
+| `close()` | 关闭弹窗 |
+| `submit()` | 触发提交（走校验 + onFinish） |
+| `getValues()` | 读当前表单值 |

@@ -106,6 +106,12 @@
 | `reset()` | 连搜索条件一起重置 |
 | `setPage({ current, pageSize })` | 改页码 |
 | `clearSelected()` | 清空勾选（含跨页保留的部分） |
-| `getData()` / `getSelected()` | 当前页数据 / 选中行（导出、删空回退都要用） |
-| `getTotal()` / `getPage()` | 总条数 / 当前 `{ current, pageSize }` |
-| `startEdit(row)` / `saveRow(row)` / `cancelRow(row)` / `removeRow(row)` / `addRow()` | 行内编辑操作 |
+| `getData()` | 当前页数据 |
+| `getSelected()` | 选中行（导出、删空回退都要用） |
+| `getTotal()` | 总条数 |
+| `getPage()` | 当前分页状态 `{ current, pageSize }` |
+| `startEdit(row)` | 让该行进入编辑态 |
+| `saveRow(row)` | 保存该行（走 rules 校验 + onSave） |
+| `cancelRow(row)` | 取消该行编辑，丢弃草稿 |
+| `removeRow(row)` | 删除该行（走 onDelete） |
+| `addRow()` | 新增一行并进入编辑态 |
