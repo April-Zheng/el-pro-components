@@ -7,6 +7,9 @@ export default defineConfig({
   title: 'ElProComponents',
   description: 'Element Plus 体系的 CRUD 高阶组件：一份 columns，驱动搜索栏、表格、表单与详情页',
 
+  // GitHub Pages 项目页：站点挂在 https://april-zheng.github.io/el-pro-components/ 下
+  base: '/el-pro-components/',
+
   head: [['meta', { name: 'theme-color', content: '#409eff' }]],
 
   markdown: {
