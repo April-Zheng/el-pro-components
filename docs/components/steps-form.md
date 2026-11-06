@@ -30,7 +30,7 @@
 | --- | --- | --- | --- |
 | steps | 每步的列定义 | `ProStepsFormItem[]` | —（必填） |
 | onFinish | 最后一步提交回调，**函数 prop**。返回 `true` → 回到第 0 步并重置各步表单 | `(values) => Promise<boolean \| any>` | — |
-| current / v-model:current | 受控当前步 | `number` | — |
+| v-model:current | 受控当前步 | `number` | — |
 | allowStepSelect | 允许点击步骤条直接跳步（不校验） | `boolean` | `false` |
 | layout | 步骤条方向 | `'horizontal' \| 'vertical'` | `'horizontal'` |
 | submitter | `false` 隐藏按钮区；对象可配 `submitButtonProps` / `resetButtonProps` / `onSubmit` / `onReset` | `false \| ProStepsSubmitter` | — |
@@ -42,7 +42,8 @@
 | 字段 | 说明 |
 | --- | --- |
 | name | 步标识（合并数据时的 key） |
-| title / description | 步骤条标题与描述 |
+| title | 步骤条标题 |
+| description | 步骤条描述 |
 | columns | 这一步的表单列，同 [ElProForm](/components/form) |
 | initialValues | 这一步的初值 |
 | stepProps | 透传给 `el-step` |

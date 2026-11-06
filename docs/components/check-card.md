@@ -20,8 +20,10 @@
 | 参数 | 说明 | 类型 |
 | --- | --- | --- |
 | value | 选中后的值 | `string \| number` |
-| title / description | 标题 / 描述 | `string` |
-| avatar / src | 图标位 / 图片位 | — |
+| title | 标题 | `string \| number` |
+| description | 描述 | `string \| number` |
+| avatar | 图标位：图片地址或自定义节点 | `string \| VNode` |
+| cover | 封面图，横向铺满卡片顶部 | `string \| VNode` |
 | disabled | 禁用 | `boolean` |
 
 ### ElProCheckCardGroup

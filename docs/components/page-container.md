@@ -38,15 +38,23 @@
 
 | 参数 | 说明 | 类型 | 默认值 |
 | --- | --- | --- | --- |
-| title / subTitle / tags / avatar | 标题行。`title: false` 表示不要标题文字（面包屑、说明、tab 还在） | `string \| false` 等 | — |
+| title | 标题；`false` 表示不要标题文字（面包屑、说明、tab 还在） | `string \| false` | — |
+| subTitle | 副标题 | `string` | — |
+| tags | 标题旁的标签 | `{ text, type }[]` | `[]` |
+| avatar | 标题左侧头像 | `string \| VNode` | — |
 | extra | 标题行右侧（也可用插槽） | 插槽优先 | — |
-| content / extraContent | 说明行：左边一段话，右边附加区（窄了自动竖排） | `string` / 插槽 | — |
+| content | 说明行左边一段话（也可用 #content 插槽） | `string` | — |
+| extraContent | 说明行右侧附加区（窄了自动竖排） | `string` | — |
 | breadcrumb | `[{ title, path?, current? }]`，**不依赖路由**，最后一项默认当当前页 | `BreadcrumbItem[]` | — |
 | breadcrumbRender | `false` 不渲染；传函数完全接管 | `false \| (props) => VNode \| null` | — |
-| tabList / tabActiveKey / tabProps | 页头底部的 tab，配 `v-model:tab-active-key` | `TabItem[]` 等 | — |
+| tabList | 页头底部的 tab | `TabItem[]` | `[]` |
+| tabActiveKey | 受控当前 tab，配 `v-model:tab-active-key` | `string \| number` | — |
+| tabProps | 透传给内部 `el-tabs` | `object` | — |
 | loading | **只顶掉内容区**，页头和 tab 留着，切页不闪 | `boolean` | `false` |
-| fixedHeader / affixProps | 页头吸顶（`el-affix`）。偏移默认取布局顶栏高度（从 `ElProLayout` 注入） | `boolean / object` | `false` |
-| contentWidth / layout | `Fixed` + `layout: 'top'` 才收窄到 1152px，和源码一致 | `string` | — |
+| fixedHeader | 页头吸顶（`el-affix`），偏移默认取布局顶栏高度（从 `ElProLayout` 注入） | `boolean` | `false` |
+| affixProps | 透传给 `el-affix`，`offset` 也在这里给 | `object` | — |
+| contentWidth | 内容宽度；`'Fixed'` 且 `layout: 'top'` 时收窄到 1152px | `'Fluid' \| 'Fixed'` | `'Fluid'` |
+| layout | 布局模式 | `'side' \| 'top'` | `'side'` |
 | pageHeaderRender | `false` 整块页头不要；传函数自己渲染 | `false \| (props) => VNode` | — |
 | header | 逐项覆盖页头 props（浅合并，优先级更高） | `object` | — |
 | waterMarkProps | 给了才套 `el-watermark` | `object` | — |
@@ -57,10 +65,12 @@
 | 插槽 | 说明 |
 | --- | --- |
 | extra | 标题行右侧 |
-| content / extraContent | 说明行 |
+| content | 说明行左侧内容 |
+| extraContent | 说明行右侧附加区 |
 | tabBarExtra | tab 栏右侧 |
 | header | 整块页头自定义 |
-| footerExtra / footer | 底部固定条 |
+| footerExtra | 底部固定条左侧附加区 |
+| footer | 底部固定条 |
 | loading | 加载态自定义 |
 
 `title` / `subTitle` / `tags` / `avatar` / `backIcon` / `breadcrumb` 这几个插槽名会原样转交给页头。

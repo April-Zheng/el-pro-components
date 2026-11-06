@@ -33,7 +33,8 @@
 | menus | 菜单树 `{ path, title, icon?, children? }` | `MenuItem[]` | — |
 | activePath | 当前激活路径 | `string` | — |
 | title | 侧栏顶部标题 | `string` | — |
-| collapsed / defaultCollapsed | 折叠，配 `v-model:collapsed` | `boolean` | `false` |
+| defaultCollapsed | 初始是否折叠 | `boolean` | `false` |
+| collapsed | 受控折叠，配 `v-model:collapsed` | `boolean` | — |
 | headerHeight | 顶栏高度（同步写 CSS 变量并 provide） | `number` | `56` |
 
 ### 事件

@@ -38,7 +38,7 @@
 | model | 受控数据。传了就一直用这一份，组件**不会重置它** | `Record<string, any>` | — |
 | initialValues | 内部草稿初值，仅未传 `model` 时生效；每次打开重新拷贝 | `Record<string, any>` | — |
 | onFinish | 校验通过后调用（即 `@finish`）。**返回真值才关窗**；返回 `false` 可留在窗内做二次确认，reject 也保持打开；不传时提交不会自动关窗 | `(values) => Promise<any>` | — |
-| open / v-model:open | 受控开窗 | `boolean` | — |
+| v-model:open | 受控开窗 | `boolean` | `false` |
 | title | 弹窗/抽屉标题 | `string` | — |
 | loading | 外部已知的提交中状态，和内部状态一起控制按钮 loading | `boolean` | `false` |
 | width | 弹窗宽度（DrawerForm 用 `drawerSize`——`size` 是**表单控件尺寸**，两个 size 混用会改半天没反应） | `string \| number` | — |

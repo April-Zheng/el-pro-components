@@ -39,7 +39,8 @@ rules: [{ required: true, type: 'array', message: '至少需要一位联系人' 
 | copyable | 每项可复制（插在原项后面） | `boolean` | `false` |
 | creator | 新增一项的初值工厂 | `(index) => Record` | `() => ({})` |
 | itemTitle | 每项标题，默认「第 N 项」 | `string \| (index) => string` | — |
-| span / gutter | 每项内部字段的默认栅格与间距 | `number` | — |
+| span | 每项内部字段的默认栅格（被子列的 formSpan 覆盖） | `number` | `12` |
+| gutter | 栅格间距 | `number` | `16` |
 
 ### 列配置
 

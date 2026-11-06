@@ -33,9 +33,15 @@
 | initialValues | 初始值，**同时是「重置」要回到的基准**；不传取挂载时 `model` 的快照 | `Record<string, any>` | — |
 | span | 每项占几格，支持响应式 `{ xs: 24, lg: 6 }` | `number \| object` | `{ xs: 24, sm: 12, md: 8, lg: 6 }` |
 | defaultFormItemsNumber | 折叠时露几项，覆盖按 span 推算的值 | `number` | — |
-| defaultCollapsed / collapsed | 默认折叠；`collapsed` 是受控开关，配 `v-model:collapsed` | `boolean` | `true` |
-| searchText / resetText / loading | 按钮文案与查询按钮的 loading | `string \| boolean` | — |
-| labelWidth / labelPosition / gutter / split | 透传给内部 `el-form`。`split` 只在 `labelPosition: 'top'` 时画行间分割线 | — | — |
+| defaultCollapsed | 默认折叠 | `boolean` | `true` |
+| collapsed | 受控折叠开关，配 `v-model:collapsed` | `boolean` | — |
+| searchText | 查询按钮文案 | `string` | `'查询'` |
+| resetText | 重置按钮文案 | `string` | `'重置'` |
+| loading | 查询按钮的 loading | `boolean` | — |
+| labelWidth | 标签宽度 | `string \| number` | `'auto'` |
+| labelPosition | 标签位置 | `'left' \| 'right' \| 'top'` | `'right'` |
+| gutter | 栅格间距 | `number` | `16` |
+| split | 行间分割线，只在 `labelPosition: 'top'` 时生效 | `boolean` | `false` |
 
 ### 事件与实例方法
 

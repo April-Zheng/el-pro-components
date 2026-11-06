@@ -35,15 +35,26 @@
 
 | 参数 | 说明 | 类型 | 默认值 |
 | --- | --- | --- | --- |
-| title / subTitle / tooltip | 标题 / 副标题 / 标题旁问号 | `string` | — |
-| collapsible / collapsed / defaultCollapsed | 折叠，配 `v-model:collapsed` | `boolean` | `false` |
-| headerStyle / bodyStyle / contentStyle | 三段样式定制 | `CSSProperties` | — |
+| title | 标题 | `string \| number` | — |
+| subTitle | 副标题 | `string \| number` | — |
+| tooltip | 标题旁问号提示 | `string` | — |
+| collapsible | 是否可折叠 | `boolean` | `false` |
+| collapsed | 受控折叠，配 `v-model:collapsed` | `boolean` | — |
+| defaultCollapsed | 默认折叠 | `boolean` | `false` |
+| headerStyle | 头部样式 | `CSSProperties` | — |
+| bodyStyle | 内容区样式 | `CSSProperties` | — |
+| contentStyle | 内容包裹层样式 | `CSSProperties` | — |
 | colSpan | 宽度：24 栅格数字、百分比、像素，支持响应式对象 | `number \| string \| object` | `24` |
-| split / gutter | 分割线方向 / 间距 | `'horizontal' \| 'vertical'` | — |
-| tabs / activeKey | 头部标签页，配 `v-model:active-key`；内容用 `#tab-<key>` 插槽 | `TabItem[]` | — |
+| split | 分割线方向 | `'horizontal' \| 'vertical'` | — |
+| gutter | 内容间距 | `number` | — |
+| tabs | 头部标签页；内容用 `#tab-<key>` 插槽 | `TabItem[]` | — |
+| activeKey | 受控标签页，配 `v-model:active-key` | `string` | — |
 | ghost | 只当布局容器：去背景、去边框、去 padding | `boolean` | `false` |
-| hoverable / boxShadow / bordered | 悬浮上浮 / 阴影 / 边框 | `boolean` | — |
+| hoverable | 悬浮上浮 | `boolean` | — |
+| boxShadow | 阴影 | `boolean` | — |
+| bordered | 边框 | `boolean` | — |
 | type | `inner` 为嵌套内卡样式 | `'inner'` | — |
 | size | `'small'` 紧凑 | `string` | — |
 | loading | 骨架屏占位 | `boolean` | `false` |
-| cover / actions | 封面图 / 底部操作区插槽 | 插槽 | — |
+| cover | 封面图 | 插槽 | — |
+| actions | 底部操作区 | 插槽 | — |

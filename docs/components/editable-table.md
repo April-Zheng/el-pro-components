@@ -44,7 +44,7 @@
 
 | 参数 | 说明 |
 | --- | --- |
-| `editableKeys` / `v-model:editable-keys` | 受控的编辑行 key 列表 |
+| `v-model:editable-keys` | 受控的编辑行 key 列表 |
 
 ### 插槽
 

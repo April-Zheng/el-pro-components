@@ -40,9 +40,11 @@
 | 参数 | 说明 | 类型 | 默认值 |
 | --- | --- | --- | --- |
 | columns | 列定义，`listSlot` 决定角色 | `ProColumn[]` | —（必填） |
-| request / dataSource | 服务端分页 / 本地分页（二选一） | — | — |
+| request | 服务端数据源 | `(params) => { data, total }` | — |
+| dataSource | 本地数据源（给了它就不走 request） | `any[]` | — |
 | rowKey | 行 key | `string` | `'id'` |
 | itemType | 条目版式 | `'list' \| 'card'` | `'list'` |
 | grid | 卡片流的栅格 `{ column, gutter }` | `object` | — |
 | pagination | 分页配置 | `false \| object` | — |
-| itemTitle / itemActions | 条目标题 / 操作的自定义渲染 | 插槽 | — |
+| itemTitle | 条目标题的自定义渲染 | 插槽 | — |
+| itemActions | 条目操作的自定义渲染 | 插槽 | — |

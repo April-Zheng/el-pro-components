@@ -41,8 +41,11 @@
 | model | **响应式**数据对象 | `Record<string, any>` | — |
 | initialValues | 初值，挂载时写入 model（仅未传 `model` 时生效） | `Record<string, any>` | — |
 | span | 每项默认占几格（24 栅格），列上 `formSpan` 可覆盖 | `number` | `8` |
-| labelWidth / labelPosition / gutter | 透传给内部 `el-form` | — | — |
-| size / disabled | 表单尺寸 / 整体禁用 | — | — |
+| labelWidth | 标签宽度 | `string \| number` | `'100px'` |
+| labelPosition | 标签位置 | `'left' \| 'right' \| 'top'` | `'right'` |
+| gutter | 栅格间距 | `number` | `16` |
+| size | 表单尺寸 | `'large' \| 'default' \| 'small'` | — |
+| disabled | 整体禁用 | `boolean` | `false` |
 | ignoreRules | 忽略列上的 rules（LightFilter 场景用） | `boolean` | `false` |
 
 ### dependency（列上的字段）
@@ -58,11 +61,13 @@
 | 参数 | 说明 | 类型 | 默认值 |
 | --- | --- | --- | --- |
 | collapsible | 标题可点击折叠 | `boolean` | `false` |
-| defaultCollapsed / collapsed | 默认折叠 / 受控折叠（配 `v-model:collapsed`） | `boolean` | `false` |
+| defaultCollapsed | 默认折叠 | `boolean` | `false` |
+| collapsed | 受控折叠（配 `v-model:collapsed`） | `boolean` | — |
 | direction | 子字段排列 | `'horizontal' \| 'vertical'` | `'horizontal'` |
 | size | 子字段间距 | `number` | `32` |
 | align | 对齐方式 | `'start' \| 'center' \| 'end'` | — |
-| title / tooltip | 标题默认取列的 `label` | `string` | — |
+| title | 分组标题，默认取列的 `label` | `string` | — |
+| tooltip | 标题旁问号提示 | `string` | — |
 
 ### 事件与实例方法
 

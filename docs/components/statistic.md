@@ -39,14 +39,21 @@
 
 | 字段 | 说明 | 类型 | 默认值 |
 | --- | --- | --- | --- |
-| value / title / tip / description | 数值、标题、标题旁问号、数值下方说明 | `string \| number` | — |
+| value | 数值 | `string \| number` | — |
+| title | 标题 | `string \| number` | — |
+| tip | 标题旁问号提示 | `string` | — |
+| description | 数值下方说明 | `string \| number` | — |
 | precision | 小数位数。不传则保留原值位数 | `number` | — |
-| prefix / suffix | `¥` / `人` / `%`，字号比数值小一号 | `string` | — |
+| prefix | 数值前缀，如 `¥`，字号比数值小一号 | `string \| number` | — |
+| suffix | 数值后缀，如 `人`、`%`，字号比数值小一号 | `string \| number` | — |
 | trend | 趋势。**红涨绿跌**（中国金融语义）；想反过来覆盖 `--el-pro-statistic-trend-up-color` / `-down-color` | `'up' \| 'down'` | — |
 | trendValue | 趋势数值文案 | `string` | — |
 | status | 数值前的小圆点 | `'success' \| 'processing' \| 'warning' \| 'error' \| 'default'` | — |
 | layout | 版式 | `'vertical' \| 'horizontal' \| 'inline'` | `'vertical'` |
-| icon / formatter / loading / groupSeparator | 左侧图标、自定义格式化、占位条、千分位符 | — | — |
+| icon | 左侧图标 | `Component` | — |
+| formatter | 完全自定义格式化，给了它就忽略 precision 与分组 | `(value) => string` | — |
+| loading | 加载占位条 | `boolean` | `false` |
+| groupSeparator | 千分位分组符 | `string` | `','` |
 
 ### 卡片侧（ElProStatisticCard）
 

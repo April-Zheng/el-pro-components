@@ -37,8 +37,10 @@
 | immediate | 默认自动请求；`false` 则等 `reload()` | `boolean` | `true` |
 | loading | 受控加载态，与内部请求态取或 | `boolean` | `false` |
 | column | 每行列数，支持响应式 `{ xs: 1, md: 2, lg: 3 }`。窄屏不配这个，三列会把标签挤成一列竖排 | `number \| object` | `3` |
-| title / extra | 标题与右侧操作 | `string` / 插槽 | — |
-| bordered / size | 透传给 `el-descriptions` | — | — |
+| title | 标题 | `string` | — |
+| extra | 右侧操作区 | 插槽 | — |
+| bordered | 边框 | `boolean` | `true` |
+| size | 尺寸 | `'large' \| 'default' \| 'small'` | `'default'` |
 
 ### 实例方法
 

@@ -38,7 +38,8 @@
 | collapseLabel | 自定义触发器文案，优先级最高 | `string` | — |
 | placement | 弹层位置 | `string` | `'bottom-start'` |
 | popoverWidth | 弹层宽度 | `number` | `320` |
-| size / disabled | 尺寸 / 整体禁用 | — | — |
+| size | 尺寸 | `'small' \| 'default' \| 'large'` | — |
+| disabled | 整体禁用 | `boolean` | `false` |
 | ignoreRules | 忽略字段上的 rules（源码同名字段） | `boolean` | `false` |
 | popoverProps | 透传给 `el-popover` | `object` | — |
 
