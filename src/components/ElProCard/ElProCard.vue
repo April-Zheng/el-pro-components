@@ -87,6 +87,11 @@ const props = withDefaults(
     collapsible: false,
     defaultCollapsed: false,
     wrap: true,
+    // 显式 undefined 是必须的：布尔 prop 一旦不写 default，Vue 会把「没传」强制成 false，
+    // 于是 `collapsed !== undefined` / `checked !== undefined` 恒为真，「受控 / 非受控」
+    // 就再也分不出来（非受控折叠、非受控勾选都会失效）。写成 undefined 才能把「没传」区分出来。
+    collapsed: undefined,
+    checked: undefined,
   },
 )
 

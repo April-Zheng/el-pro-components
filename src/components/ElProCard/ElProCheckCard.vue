@@ -10,7 +10,7 @@
  * - 成组：放进 `<ElProCheckCardGroup v-model="val" :options="…" />`，
  *   选中态由组统一管理，卡片只负责上报「我被点了」。
  */
-import { computed, inject } from 'vue'
+import { computed, inject, ref } from 'vue'
 import type { VNode } from 'vue'
 import ElProSkeletonComp from '../ElProSkeleton/ElProSkeleton.vue'
 import { PRO_CHECK_CARD_CONTEXT } from '../../core/cardContext'
@@ -44,6 +44,10 @@ const props = withDefaults(
     size: 'default',
     disabled: false,
     loading: false,
+    // 显式 undefined：布尔 prop 不写 default 时「没传」会被强制成 false，
+    // 独立用法里 `props.checked === undefined` 就恒为假，emit('update:checked') 永不触发。
+    // 写成 undefined 才能把「没传」与「传了 false」区分开，恢复非受控勾选。
+    checked: undefined,
   },
 )
 
@@ -54,9 +58,15 @@ const emit = defineEmits<{
 
 const group = inject(PRO_CHECK_CARD_CONTEXT, null)
 
-const isChecked = computed(() =>
-  group && props.value !== undefined ? group.isChecked(props.value) : !!props.checked,
-)
+/** 是否受控：父组件传了 `checked`（含 `v-model:checked` 绑定的初值）就算受控 */
+const isControlled = computed(() => props.checked !== undefined)
+/** 独立且非受控时的内部状态（没绑 checked 时自己翻转） */
+const innerChecked = ref(false)
+
+const isChecked = computed(() => {
+  if (group && props.value !== undefined) return group.isChecked(props.value)
+  return isControlled.value ? !!props.checked : innerChecked.value
+})
 
 const isDisabled = computed(() => props.disabled || !!group?.disabled.value)
 
@@ -66,8 +76,11 @@ function handleClick() {
     group.toggle(props.value)
     return
   }
-  if (props.checked === undefined) emit('update:checked', !isChecked.value)
-  emit('change', !isChecked.value)
+  const next = !isChecked.value
+  // 非受控：自己翻转内部状态；受控（含 v-model:checked）：交给父组件更新，每次都 emit
+  if (!isControlled.value) innerChecked.value = next
+  emit('update:checked', next)
+  emit('change', next)
 }
 </script>
 

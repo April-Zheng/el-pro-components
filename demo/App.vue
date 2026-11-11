@@ -21,6 +21,7 @@ import LightFilterPage from './pages/LightFilterPage.vue'
 import QueryFilterPage from './pages/QueryFilterPage.vue'
 import DetailPage from './pages/DetailPage.vue'
 import CardPage from './pages/CardPage.vue'
+import LayoutPage from './pages/LayoutPage.vue'
 import StatisticPage from './pages/StatisticPage.vue'
 import ListPage from './pages/ListPage.vue'
 import EditablePage from './pages/EditablePage.vue'
@@ -57,6 +58,7 @@ const active = ref(initialPage())
     <QueryFilterPage v-else-if="active === '/query-filter'" />
     <DetailPage v-else-if="active === '/detail'" />
     <CardPage v-else-if="active === '/card'" />
+    <LayoutPage v-else-if="active === '/layout'" />
     <StatisticPage v-else-if="active === '/statistic'" />
     <ListPage v-else-if="active === '/list'" />
     <EditablePage v-else-if="active === '/editable'" />

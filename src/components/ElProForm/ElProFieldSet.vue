@@ -32,7 +32,13 @@ const props = withDefaults(
     /** 选项是否带边框 */
     border?: boolean
   }>(),
-  { border: false },
+  {
+    border: false,
+    // 显式 undefined：不写 default 时布尔 prop「没传」会被强制成 false，
+    // `props.multiple ?? Array.isArray(modelValue)` 里的自动判断永远取不到，
+    // 导致「不传 multiple 也一律按单选渲染」。写成 undefined 才能保留自动判断。
+    multiple: undefined,
+  },
 )
 
 const emit = defineEmits<{ 'update:modelValue': [any] }>()

@@ -21,6 +21,7 @@ export const menus: ProLayoutMenuItem[] = [
   { title: '查询筛选区', path: '/query-filter' },
   { title: '详情示例', path: '/detail' },
   { title: '卡片示例', path: '/card' },
+  { title: '布局骨架', path: '/layout' },
   { title: '指标卡', path: '/statistic' },
   { title: '列表示例', path: '/list' },
   { title: '行内编辑', path: '/editable' },

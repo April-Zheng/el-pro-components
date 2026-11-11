@@ -44,6 +44,10 @@ const props = withDefaults(
     activePath: '',
     router: true,
     defaultCollapsed: false,
+    // 显式 undefined：布尔 prop 不写 default 时「没传」会被强制成 false，
+    // `props.collapsed ?? innerCollapsed` 就永远取不到 innerCollapsed，
+    // 非受控折叠与窄屏自动收起都会失效。写成 undefined 才能区分「没传」。
+    collapsed: undefined,
     siderWidth: 220,
     collapsedWidth: 64,
   },

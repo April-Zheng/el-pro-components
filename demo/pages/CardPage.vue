@@ -25,6 +25,14 @@ const planOptions = [
 ]
 
 const pickedFeatures = ref<any[]>(['alert'])
+
+// 下面这组是「独立 / 非受控」用法，拿来和上面的「成组 / 受控」对照。
+const standaloneChecked = ref(false)
+const standaloneChangeCount = ref(0)
+function onStandaloneChange() {
+  standaloneChangeCount.value++
+}
+const cmpCardCollapsed = ref(false)
 </script>
 
 <template>
@@ -41,6 +49,32 @@ const pickedFeatures = ref<any[]>(['alert'])
     </template>
     <p class="demo-p">
       点标题前的箭头折叠。头部、副标题、提示、右上角操作都是结构化属性，不用自己排版。
+    </p>
+  </ElProCard>
+
+  <ElProCard
+    title="非受控折叠（只给 collapsible，不绑 v-model:collapsed）"
+    sub-title="预期：点箭头 body 收起"
+    collapsible
+    header-bordered
+    style="margin-top: 16px"
+  >
+    <p class="demo-p">
+      点右上角箭头折叠 / 展开。这张不绑 v-model，折叠状态由组件内部维护；下面那张是受控的，
+      状态交给外部持有。
+    </p>
+  </ElProCard>
+
+  <ElProCard
+    v-model:collapsed="cmpCardCollapsed"
+    title="受控折叠（绑 v-model:collapsed，作对照）"
+    sub-title="当前 collapsed 状态同样点箭头切换"
+    collapsible
+    header-bordered
+    style="margin-top: 16px"
+  >
+    <p class="demo-p">
+      这张绑了 v-model:collapsed，点箭头会正常收起 / 展开。
     </p>
   </ElProCard>
 
@@ -77,6 +111,20 @@ const pickedFeatures = ref<any[]>(['alert'])
       <ElProCheckCard value="report" title="日报推送" description="每天 9:00 汇总前一天数据" />
       <ElProCheckCard value="audit" title="操作审计" description="记录关键操作，保留 180 天" disabled />
     </ElProCheckCardGroup>
+  </div>
+
+  <div class="demo-card" style="margin-top: 16px">
+    <h3 class="demo-section-title">CheckCard 独立用法（v-model:checked，不在组里）</h3>
+    <p class="demo-section-desc">
+      当前 checked = <b>{{ standaloneChecked }}</b> · change 事件收到 <b>{{ standaloneChangeCount }}</b> 次。
+      点卡片切换勾选：checked 会在 true / false 之间变，change 也会同步计数。
+    </p>
+    <ElProCheckCard
+      v-model:checked="standaloneChecked"
+      title="独立勾选卡"
+      description="点我，观察上面 checked 会不会跟着变"
+      @change="onStandaloneChange"
+    />
   </div>
 
   <ElProCard title="加载态" loading style="margin-top: 16px" />

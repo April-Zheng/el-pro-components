@@ -35,3 +35,4 @@ node_modules/.vite
 # VitePress
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+/.opcteam
