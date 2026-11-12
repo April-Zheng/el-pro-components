@@ -18,6 +18,7 @@ import { ElPagination } from 'element-plus'
 import CellRenderer from '../../fields/CellRenderer.vue'
 import ElProCard from '../ElProCard/ElProCard.vue'
 import { useTable } from '../../core/useTable'
+import { resolveResponsive, useBreakpoint } from '../../core/responsive'
 import type { ProColumn, ProListGrid, ProListSlot, ProRequest } from '../../types'
 
 defineOptions({ name: 'ElProList' })
@@ -100,7 +101,8 @@ const slotMap = computed<Record<string, any>>(() => slots as unknown as Record<s
 
 const remote = useTable({
   columns: () => props.columns,
-  request: props.request,
+  // computed 包一层：换掉 request 函数后，重新请求要用新函数
+  request: computed(() => props.request),
   params: () => props.params,
   defaultPageSize: props.defaultPageSize,
   immediate: props.immediate,
@@ -215,10 +217,18 @@ const Cell: Component = (p: { col: ProColumn; item: any; index: number }) => {
 
 const isGrid = computed(() => !!props.grid)
 
+const breakpoint = useBreakpoint()
+
 const gridStyle = computed(() => {
   const g = props.grid
   if (!g) return undefined
-  const col = g.column ?? 1
+  // column 可直接给数字，也可写成 `{ xs: 1, md: 2, xl: 4 }`：那个数字作基准，
+  // xs~xxl 按当前断点覆盖。此前整对象被当数字用（`col > 1` 恒为 false），永远单列。
+  const col = resolveResponsive<number>(
+    { xs: g.xs, sm: g.sm, md: g.md, lg: g.lg, xl: g.xl, xxl: g.xxl },
+    breakpoint.value,
+    g.column ?? 1,
+  )
   const gutter = Array.isArray(g.gutter) ? g.gutter : [g.gutter ?? 16, g.gutter ?? 16]
   return {
     gridTemplateColumns: col > 1 ? `repeat(${col}, minmax(0, 1fr))` : 'minmax(0, 1fr)',

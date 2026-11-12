@@ -375,7 +375,8 @@ function onPageSizeChange(size: number) {
 
 const table = useTable({
   columns: () => props.columns,
-  request: props.request,
+  // computed 包一层：换掉 request 函数后，reload 要用新函数（否则只有首屏那次生效）
+  request: computed(() => props.request),
   params: () => props.params,
   defaultPageSize:
     typeof props.pagination === 'object' ? (props.pagination.pageSize ?? props.defaultPageSize) : props.defaultPageSize,

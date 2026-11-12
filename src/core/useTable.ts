@@ -10,8 +10,8 @@
  *
  * 只上其中一层是不够的：只做 1，用户不接 signal 就失效；只做 2，请求还在飞、白占带宽。
  */
-import { computed, onBeforeUnmount, reactive, ref, shallowRef, toValue, watch } from 'vue'
-import type { MaybeRefOrGetter } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, shallowRef, toValue, unref, watch } from 'vue'
+import type { MaybeRef, MaybeRefOrGetter } from 'vue'
 import type { ProColumn, ProRequest, ProRequestParams, SortOrder } from '../types'
 import { DISPLAY_ONLY_VALUE_TYPES } from './valueType'
 
@@ -23,7 +23,12 @@ type ProPolling<T> = number | boolean | ((data: T[]) => number | boolean | undef
 
 export interface UseTableOptions<T = any> {
   columns: MaybeRefOrGetter<ProColumn<T>[]>
-  request?: ProRequest<T>
+  /**
+   * 数据源。可直给函数，也可给 ref / computed —— 后者每次请求都重新读取，
+   * 用于 request 函数本身会变的场景（换端点、按条件切换端点）。
+   * 刻意不收 `MaybeRefOrGetter`：getter 与 request 函数都是函数，运行时无法区分。
+   */
+  request?: MaybeRef<ProRequest<T> | undefined>
   params?: MaybeRefOrGetter<Record<string, any> | undefined>
   defaultPageSize?: number
   /** 初始页码。受控分页的初始 current 从这里进 */
@@ -181,7 +186,8 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
   async function fetchData(opts: { resetPage?: boolean; polling?: boolean } = {}) {
     // 受控数据模式：不发请求，数据由外部提供
     if (isControlled.value) return
-    const req = options.request
+    // 每次请求都重新读取：request 可能是个 ref/computed，换了函数才能用上新的
+    const req = unref(options.request)
     if (!req) return
     if (opts.resetPage) current.value = 1
 

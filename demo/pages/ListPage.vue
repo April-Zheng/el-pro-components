@@ -69,6 +69,29 @@ async function removeUser(row: User) {
     </ElProList>
   </div>
 
+  <div class="demo-card" style="margin-top: 16px">
+    <h3 class="demo-section-title">卡片流 · 响应式列数</h3>
+    <p class="demo-section-desc">
+      <code>grid.column</code> 写成断点对象 <code>{ xs: 1, sm: 2, md: 3, xl: 4 }</code>：
+      这里没写 <code>column</code>，基准回落到 1，<code>sm/md/xl</code> 按当前视口宽度往上覆盖。
+      拖动浏览器窗口宽度即可看到列数变化（断点对齐 antd：sm ≥ 576、md ≥ 768、xl ≥ 1200）。
+    </p>
+    <ElProList
+      :columns="listColumns"
+      :request="requestUsers"
+      row-key="id"
+      item-type="card"
+      :grid="{ xs: 1, sm: 2, md: 3, xl: 4, gutter: 16 }"
+      :pagination="false"
+      :bordered="false"
+      :default-page-size="8"
+    >
+      <template #actions="{ item }">
+        <ElButton link type="primary" size="small" @click="openEdit(item as User)">编辑</ElButton>
+      </template>
+    </ElProList>
+  </div>
+
   <div class="demo-hint">
     listSlot 决定字段在条目里的位置：avatar / title / subTitle / description / extra / aside / actions。
     不写 listSlot 也能跑，会按 valueType 和顺序自动推断。
