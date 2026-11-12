@@ -3,8 +3,8 @@
  * 表格交互增强示例：批次 3 的七项能力逐块演示。
  * 数据故意带重复分类（合并单元格）与 sort 字段（行拖拽）。
  */
-import { ref } from 'vue'
-import { ElAlert, ElMessage } from 'element-plus'
+import { h, ref } from 'vue'
+import { ElAlert, ElMessage, ElTag } from 'element-plus'
 import { ElProTable } from '@/index'
 import type { ProColumn, ProRequest, ProRequestResult } from '@/index'
 import { delay } from '../data/mock'
@@ -31,6 +31,27 @@ const baseColumns: ProColumn<Row>[] = [
   { prop: 'category', label: '分类', valueType: 'tag' },
   { prop: 'name', label: '名称' },
   { prop: 'amount', label: '金额', valueType: 'money' },
+]
+
+/* --------------------------- 7. 列 formatter --------------------------- */
+
+const formatterColumns: ProColumn<Row>[] = [
+  { prop: 'id', label: 'ID', valueType: 'indexBorder', width: 64, search: false },
+  { prop: 'name', label: '名称', search: false },
+  {
+    prop: 'amount',
+    label: '金额（formatter 返回字符串）',
+    search: false,
+    // 展示层转义口，优先于 valueType —— 之前这个属性完全没生效
+    formatter: (row, _column, cellValue) => `¥${Number(cellValue).toFixed(2)}（${row.category}）`,
+  },
+  {
+    prop: 'category',
+    label: '分类（formatter 返回 VNode）',
+    search: false,
+    formatter: (_row, _column, cellValue) =>
+      h(ElTag, { size: 'small', type: 'success' }, () => String(cellValue)),
+  },
 ]
 
 const requestRows: ProRequest<Row> = async (params) => {
@@ -188,6 +209,20 @@ function onDragSortEnd(rows: Row[]) {
         :column-setting="{ listHeight: 160, checkable: true, draggable: true }"
         show-summary
         :summary-method="summaryMethod"
+      />
+    </section>
+
+    <!-- 7. 列 formatter -->
+    <section>
+      <h4>7. 列 formatter（展示层转义口，签名同 el-table-column：row/column/cellValue/index）</h4>
+      <p class="hint">
+        「金额」返回字符串、「分类」返回 VNode —— 都优先于 valueType 渲染（此前该属性不生效）
+      </p>
+      <ElProTable
+        :columns="formatterColumns"
+        :request="requestRows"
+        :search="false"
+        :pagination="false"
       />
     </section>
   </div>

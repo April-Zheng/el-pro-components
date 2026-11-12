@@ -26,7 +26,7 @@
 import { computed, defineComponent, getCurrentInstance, h, inject, ref, useSlots, watch } from 'vue'
 import { ElAffix, ElTabPane, ElTabs, ElWatermark } from 'element-plus'
 import { PRO_LAYOUT } from '../../core/layoutContext'
-import type { ProBreadcrumbItem, ProPageContainerProps } from '../../types'
+import type { ProBreadcrumbItem, ProPageContainerProps, ProPageTab } from '../../types'
 import ElProPageHeader from './ElProPageHeader.vue'
 import ElProFooterToolbar from './ElProFooterToolbar.vue'
 
@@ -189,6 +189,21 @@ watch(
   () => props.tabActiveKey,
   (key) => {
     if (key !== undefined) innerTabKey.value = key
+  },
+  { immediate: true },
+)
+
+/**
+ * 默认选中第一个 tab，并在 tabList 异步到达 / 变化后保持选中项有效。
+ * el-tabs 只在 modelValue 为 `undefined` 时才回落到第一个 pane —— 内部初值是 `''`
+ * 时，tab 栏渲染出来但一个都不选中。这里显式回落到第一个。
+ */
+watch(
+  () => props.tabList,
+  (list: ProPageTab[]) => {
+    if (!list.length) return
+    const names = list.map((t, i) => String(t.key ?? i))
+    if (!names.includes(String(innerTabKey.value))) innerTabKey.value = names[0]
   },
   { immediate: true },
 )

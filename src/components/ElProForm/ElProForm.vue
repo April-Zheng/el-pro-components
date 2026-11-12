@@ -5,10 +5,11 @@
  * `model` 需要传一个**响应式对象**（reactive / ref 的 value），
  * 组件直接读写它的字段。这一点和 el-form 的 model 约定一致。
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, provide, ref, watch } from 'vue'
 import { ElButton, ElCol, ElDivider, ElForm, ElFormItem, ElRow } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { resolveFormColumns } from '../../core/formDependency'
+import { PRO_FORM_READONLY } from '../../core/formContext'
 import FormField from '../../fields/FormField.vue'
 import ProFormList from './ProFormList.vue'
 import ProFormGroup from './ProFormGroup.vue'
@@ -67,6 +68,15 @@ const emit = defineEmits<{
 }>()
 
 const formRef = ref<FormInstance>()
+
+/**
+ * 把只读状态放进上下文，让嵌套在 group / formList 里的字段也能拿到 —— 只靠顶层
+ * 那条 `:form-readonly` 传参覆盖不到深层字段（对齐 React 的 EditOrReadOnlyContext）。
+ */
+provide(
+  PRO_FORM_READONLY,
+  computed(() => props.readonly === true),
+)
 
 /** 异步初值的加载态，与外部 loading 合并 */
 const requestLoading = ref(false)

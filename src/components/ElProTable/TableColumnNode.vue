@@ -9,7 +9,7 @@
  * 单元格要用到的状态（编辑态、插槽、草稿值）全部来自 PRO_TABLE_CELL 上下文，
  * 所以这一层递归无论多深都不用多传参数。
  */
-import { computed, inject } from 'vue'
+import { computed, defineComponent, h, inject } from 'vue'
 import { ElButton, ElTableColumn } from 'element-plus'
 import CellRenderer from '../../fields/CellRenderer.vue'
 import FormField from '../../fields/FormField.vue'
@@ -99,6 +99,34 @@ function columnSlot(name: string) {
   }
   return comp
 }
+
+/**
+ * `column.formatter` 的渲染器。
+ *
+ * 这一列始终提供了 `#default` 插槽，而 Element Plus 只在**没有**默认插槽时才会调用
+ * `el-table-column` 的 `formatter`（见其 render-helper），所以光把 `formatter` 透传下去
+ * 是死代码。这里在插槽内手动调一次，签名与 el-table-column 保持一致
+ * `(row, column, cellValue, index)`，返回值（string 或 VNode）统一包进 `<span>` 交给 Vue。
+ */
+const FormatterCell = defineComponent({
+  props: {
+    row: { type: null, required: true },
+    index: { type: Number, required: true },
+  },
+  setup(p) {
+    return () =>
+      h(
+        'span',
+        null,
+        props.column.formatter!(
+          p.row,
+          props.column,
+          props.column.prop ? (p.row as any)[props.column.prop] : undefined,
+          p.index,
+        ),
+      )
+  },
+})
 </script>
 
 <template>
@@ -225,6 +253,8 @@ function columnSlot(name: string) {
           </div>
         </slot>
       </template>
+      <!-- formatter：展示层转义口，优先于 valueType/CellRenderer -->
+      <FormatterCell v-else-if="column.formatter" :row="row" :index="$index" />
       <CellRenderer
         v-else
         :value="column.prop ? row[column.prop] : undefined"

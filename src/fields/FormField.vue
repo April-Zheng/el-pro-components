@@ -8,7 +8,7 @@
  * 直接吐给 request，后端就收到 `2026-11-02T08:00:00.000Z` 这种值。
  * 传 `column.valueFormat` 或 `fieldProps['value-format']` 可覆盖。
  */
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import {
   ElCascader,
   ElCheckbox,
@@ -31,6 +31,7 @@ import {
 } from 'element-plus'
 import type { ProColumn } from '../types'
 import { enumToOptions } from '../core/valueType'
+import { PRO_FORM_READONLY } from '../core/formContext'
 import CellRenderer from './CellRenderer.vue'
 
 const props = defineProps<{
@@ -42,6 +43,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ 'update:modelValue': [any] }>()
+
+/** 表单级只读上下文：ElProForm 注入，供 group / formList 里的深层字段继承 */
+const formReadonlyCtx = inject(PRO_FORM_READONLY, null)
 
 const value = computed({
   get: () => props.modelValue,
@@ -71,7 +75,9 @@ const mergedProps = computed(() => {
  * valueType 词汇），而不是禁用的输入框——对齐 React 的 EditOrReadOnlyContext mode='read'。
  */
 const isReadonlyDisplay = computed(
-  () => props.mode === 'form' && (props.formReadonly === true || props.column.readonly === true),
+  () =>
+    props.mode === 'form' &&
+    (props.formReadonly === true || formReadonlyCtx?.value === true || props.column.readonly === true),
 )
 
 const options = computed(() => enumToOptions(props.column.valueEnum, true))

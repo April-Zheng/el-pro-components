@@ -191,9 +191,9 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- 说明内容 -->
-    <div v-if="$slots.default" class="el-pro-page-header__content">
-      <slot />
+    <!-- 说明内容：插槽优先，`content` 作为字符串简写 -->
+    <div v-if="$slots.default || content" class="el-pro-page-header__content">
+      <slot>{{ content }}</slot>
     </div>
 
     <!-- 页头底部，PageContainer 的 tab 就挂这儿 -->

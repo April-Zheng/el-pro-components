@@ -14,7 +14,7 @@
  */
 import { ref } from 'vue'
 import { ElButton, ElMessage } from 'element-plus'
-import { ElProPageContainer, ElProTable } from '@/index'
+import { ElProPageContainer, ElProPageHeader, ElProTable } from '@/index'
 import type { ProColumn, ProPageTab } from '@/index'
 import { ROLE_ENUM, STATUS_ENUM } from '../data/enums'
 import { requestUsers } from '../data/mock'
@@ -140,6 +140,43 @@ function batchRemove() {
         @selection-change="(rows: User[]) => (selected = rows)"
       />
     </ElProPageContainer>
+
+    <div class="demo-card" style="margin-top: 16px">
+      <h3 class="demo-section-title">ElProPageHeader 独立使用 · content 简写</h3>
+      <p class="demo-section-desc">
+        `content="…"` 直接渲染说明行。上面的容器里说明行走的是页面容器自带的说明区；
+        独立用页头时它此前是死代码，现已生效。
+      </p>
+      <ElProPageHeader
+        title="独立页头"
+        sub-title="subTitle"
+        content="这行文字来自 content 属性。"
+        :tags="['独立']"
+        :breadcrumb="[{ title: '首页', path: '/' }, { title: '独立页头' }]"
+        @back="onBack"
+      />
+    </div>
+
+    <div class="demo-card" style="margin-top: 16px">
+      <h3 class="demo-section-title">ElProPageContainer · 非受控 tab（不绑 v-model:tab-active-key）</h3>
+      <p class="demo-section-desc">
+        只给 `tab-list`、不绑 `tab-active-key`：组件应默认选中第一个「全部」
+        （此前内部初值是空串，导致一个都不选中）。
+      </p>
+      <ElProPageContainer
+        title="非受控 tab"
+        content="没有 v-model:tab-active-key，选中态由组件自己接管。"
+        :tab-list="tabList"
+      >
+        <ElProTable
+          :columns="columns"
+          :request="requestUsers"
+          row-key="id"
+          :search="false"
+          :default-page-size="5"
+        />
+      </ElProPageContainer>
+    </div>
   </div>
 </template>
 

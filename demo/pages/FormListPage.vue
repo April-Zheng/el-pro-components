@@ -65,6 +65,40 @@ const submitted = ref('')
 function onSubmit(values: Record<string, any>) {
   submitted.value = JSON.stringify(values, null, 2)
 }
+
+/* ------------------ readonly 贯穿嵌套（group + formList） ------------------ */
+
+const readonlyColumns: ProColumn[] = [
+  { prop: 'projectName', label: '项目名称', valueType: 'text' },
+  { prop: 'owner', label: '负责人', valueType: 'select', valueEnum: { zh: '张三', li: '李四' } },
+  {
+    prop: 'advanced',
+    label: '高级设置',
+    valueType: 'group',
+    columns: [
+      { prop: 'env', label: '环境', valueType: 'radio', valueEnum: { dev: '开发', prod: '生产' } },
+      { prop: 'notify', label: '通知', valueType: 'switch' },
+    ],
+  },
+  {
+    prop: 'contacts',
+    label: '联系人',
+    valueType: 'formList',
+    formSpan: 24,
+    children: [
+      { prop: 'name', label: '姓名', valueType: 'text', formSpan: 12 },
+      { prop: 'phone', label: '电话', valueType: 'text', formSpan: 12 },
+    ],
+    formListProps: { min: 1, max: 3, addText: '添加联系人' },
+  },
+]
+
+const readonlyModel = reactive<Record<string, any>>({
+  projectName: '数据中台',
+  owner: 'zh',
+  advanced: { env: 'prod', notify: true },
+  contacts: [{ name: '王五', phone: '13800000000' }],
+})
 </script>
 
 <template>
@@ -76,6 +110,22 @@ function onSubmit(values: Record<string, any>) {
     </p>
 
     <ElProForm :columns="columns" :model="model" :span="12" label-width="90px" @submit="onSubmit" />
+  </div>
+
+  <div class="demo-card">
+    <h3 class="demo-section-title">ElProForm readonly · 只读贯穿嵌套字段</h3>
+    <p class="demo-section-desc">
+      readonly 时，顶层字段、`group` 里的字段、`formList` 里的字段都渲染成只读展示（不是禁用输入框），
+      formList 的增删按钮也一并隐藏。此前只有顶层字段是只读的，嵌套字段仍可编辑。
+    </p>
+    <ElProForm
+      :columns="readonlyColumns"
+      :model="readonlyModel"
+      readonly
+      :span="12"
+      label-width="90px"
+      :show-actions="false"
+    />
   </div>
 
   <div class="demo-card">

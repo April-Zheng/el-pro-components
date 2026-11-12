@@ -8,10 +8,11 @@
  * 代价是**下标会随增删漂移**，所以 v-for 的 key 必须换成稳定的符号键，
  * 否则删掉第 1 项后，剩下几项的输入框会跟错行。
  */
-import { computed, onMounted, toRaw, watch } from 'vue'
+import { computed, inject, onMounted, toRaw, watch } from 'vue'
 import { ElButton, ElCol, ElFormItem, ElRow } from 'element-plus'
 import FormField from '../../fields/FormField.vue'
 import { resolveFormColumns } from '../../core/formDependency'
+import { PRO_FORM_READONLY } from '../../core/formContext'
 import type { ProColumn, ProFormListConfig } from '../../types'
 
 defineOptions({ name: 'ProFormList' })
@@ -55,6 +56,10 @@ const list = computed<ListRow[]>(() => {
   const value = props.model[props.prop]
   return Array.isArray(value) ? value : []
 })
+
+/** 只读时隐藏增删/复制/移动按钮：字段已经渲染成只读展示，留着操作按钮自相矛盾 */
+const formReadonly = inject(PRO_FORM_READONLY, null)
+const isReadonly = computed(() => formReadonly?.value === true)
 
 const min = computed(() => props.config?.min ?? 0)
 const max = computed(() => props.config?.max ?? Number.POSITIVE_INFINITY)
@@ -198,7 +203,7 @@ function rowColumns(item: ListRow) {
     <div v-for="(item, index) in list" :key="item[ROW_KEY]" class="el-pro-form-list__item">
       <div class="el-pro-form-list__header">
         <span class="el-pro-form-list__title">{{ itemTitle(item, index) }}</span>
-        <span class="el-pro-form-list__actions">
+        <span v-if="!isReadonly" class="el-pro-form-list__actions">
           <template v-if="config?.arrowSort">
             <ElButton
               link
@@ -252,7 +257,7 @@ function rowColumns(item: ListRow) {
       </ElRow>
     </div>
 
-    <div class="el-pro-form-list__footer">
+    <div v-if="!isReadonly" class="el-pro-form-list__footer">
       <ElButton class="el-pro-form-list__add" :disabled="!canAdd" @click="add">
         {{ config?.addText ?? '添加一项' }}
       </ElButton>
