@@ -13,7 +13,7 @@
  * - `itemType="card"` 时每条自动包一层 ElProCard，做卡片流不用自己 v-for 套壳。
  */
 import { computed, h, ref, useSlots } from 'vue'
-import type { Component } from 'vue'
+import type { Component, VNode } from 'vue'
 import { ElPagination } from 'element-plus'
 import CellRenderer from '../../fields/CellRenderer.vue'
 import ElProCard from '../ElProCard/ElProCard.vue'
@@ -67,6 +67,16 @@ const props = withDefaults(
      * 前提是调用方自己往 dataSource 里追数据
      */
     loadMore?: () => Promise<void>
+    /**
+     * 条目级事件/attrs：对齐 React 的 onRow。返回对象 v-bind 到条目根元素，
+     * onClick 等与内置 item-click 事件并存不互斥（Vue 会合并同名单击回调）
+     */
+    onItem?: (item: any, index: number) => Record<string, any>
+    /**
+     * 条目级自定义渲染：对齐 React 的 itemRender。defaultDom 是默认条目，
+     * 返回包装后的 VNode（加壳/改属性）或完全替换的 VNode；未传时渲染默认条目
+     */
+    itemRender?: (item: any, index: number, defaultDom: VNode | VNode[]) => VNode | VNode[]
   }>(),
   {
     columns: () => [],
@@ -239,7 +249,33 @@ const gridStyle = computed(() => {
 
 const cardProps = { hoverable: true, type: 'inner' as const }
 
+/** 条目根 attrs：卡片壳 props + onItem 返回的事件/attrs（onItem 在后，不被壳 props 吞掉） */
+function entryAttrs(item: any, index: number): Record<string, any> {
+  const extra = props.onItem?.(item, index)
+  if (props.itemType === 'card') return { ...cardProps, ...(extra ?? {}) }
+  return extra ?? {}
+}
+
 const itemKey = (item: any, index: number) => item?.[props.rowKey] ?? index
+
+/**
+ * 条目级自定义渲染的宿主：无 DOM，把默认条目作为 defaultDom 交给 itemRender，
+ * 未传 itemRender 时原样渲染默认条目。签名对齐 React ListView 的 itemRender——
+ * 抽成宿主而不是在条目循环里分支，是为了默认条目模板只写一份（包裹与替换共用）
+ */
+function ItemRenderHost(
+  hostProps: {
+    item: any
+    index: number
+    itemRender?: (item: any, index: number, defaultDom: VNode | VNode[]) => VNode | VNode[]
+  },
+  { slots }: { slots: any },
+) {
+  const defaultDom = slots.default?.()
+  if (hostProps.itemRender) return hostProps.itemRender(hostProps.item, hostProps.index, defaultDom)
+  return defaultDom
+}
+ItemRenderHost.props = ['item', 'index', 'itemRender']
 
 /* ------------------------------ 行选择 / 展开行 / 加载更多 ------------------------------ */
 
@@ -304,15 +340,20 @@ async function onLoadMore() {
 
     <div v-loading="loadingState" class="el-pro-list__container">
       <div v-if="items.length" class="el-pro-list__items" :class="{ 'is-grid': isGrid }" :style="gridStyle">
-        <component
-          :is="itemType === 'card' ? ElProCard : 'div'"
+        <ItemRenderHost
           v-for="(item, index) in items"
           :key="itemKey(item, index)"
-          v-bind="itemType === 'card' ? cardProps : {}"
-          class="el-pro-list__entry"
-          :class="itemType === 'card' ? 'is-card' : 'is-row'"
-          @click="emit('item-click', item, index)"
+          :item="item"
+          :index="index"
+          :item-render="itemRender"
         >
+          <component
+            :is="itemType === 'card' ? ElProCard : 'div'"
+            v-bind="entryAttrs(item, index)"
+            class="el-pro-list__entry"
+            :class="itemType === 'card' ? 'is-card' : 'is-row'"
+            @click="emit('item-click', item, index)"
+          >
           <div class="el-pro-list__inner" :class="itemLayout === 'vertical' ? 'is-vertical' : 'is-horizontal'">
             <!-- 行选择勾选框 -->
             <div v-if="selection" class="el-pro-list__selection" @click.stop>
@@ -430,7 +471,8 @@ async function onLoadMore() {
               />
             </div>
           </div>
-        </component>
+          </component>
+        </ItemRenderHost>
       </div>
 
       <div v-else-if="!loadingState" class="el-pro-list__empty">

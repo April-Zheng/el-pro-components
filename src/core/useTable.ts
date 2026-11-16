@@ -106,6 +106,9 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
   /** 游标分页的游标历史。下标 0 是第一页（无游标）；current 页的游标 = history[current-1] */
   const cursorHistory = ref<(string | undefined)[]>([undefined])
 
+  /** 游标分页还有没有下一页（随每次成功加载更新）。返回给调用方，别再从 total 里猜 */
+  const hasNext = ref(false)
+
   /** 假分页模式下的全量数据。非 null = 后端一次回了跨页全量，本地切片 */
   const fullData = shallowRef<T[] | null>(null)
 
@@ -240,13 +243,15 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
         fullData.value = null
         data.value = []
         total.value = 0
+        hasNext.value = false
         return
       }
 
       const rawList = (Array.isArray(res) ? res : (res?.data ?? [])) as T[]
       const list = options.postData ? options.postData(rawList) : rawList
 
-      // 游标分页：记录本次回包的游标，total 只表达「还有没有下一页」
+      // 游标分页：记录本次回包的游标，total 只表达「还有没有下一页」，
+      // hasNext 是对外的正式标志（对齐 React 协议），上层展示真实剩余数用它
       if (toValue(options.cursor)) {
         const nextToken = Array.isArray(res) ? undefined : res?.nextToken
         cursorHistory.value.length = current.value
@@ -254,6 +259,7 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
         fullData.value = null
         data.value = list
         total.value = current.value * pageSize.value + (nextToken ? 1 : 0)
+        hasNext.value = nextToken !== undefined
         options.onLoad?.(list)
         schedulePolling(list)
         return
@@ -319,10 +325,30 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
     selectedKeys.value = []
   }
 
+  /**
+   * 游标可达性：只允许跳到「已有游标」的页（历史里存的）。setPage 与 handlePageChange
+   * 共用同一约束——未访问页没有游标，请求会退化成首屏却被当成第 N 页展示，数据错位
+   */
+  function isCursorPageReachable(page: number): boolean {
+    return (
+      page === 1 ||
+      (cursorHistory.value.length > page - 1 && cursorHistory.value[page - 1] !== undefined)
+    )
+  }
+
   async function setPage(page: Partial<{ current: number; pageSize: number }>) {
+    // 换页长时历史作废，只有首屏可达（对齐 handlePageSizeChange 的回到第 1 页）。
+    // 之前这里没有校验：setPage({current:5}) 会退化成首屏请求但页码停在 5，数据错位
+    if (toValue(options.cursor)) {
+      const target = page.pageSize !== undefined ? 1 : page.current
+      if (target !== undefined && !isCursorPageReachable(target)) return Promise.resolve()
+    }
     if (page.pageSize !== undefined) pageSize.value = page.pageSize
     if (page.current !== undefined) current.value = page.current
-    if (toValue(options.cursor) && page.pageSize !== undefined) cursorHistory.value = [undefined]
+    if (toValue(options.cursor) && page.pageSize !== undefined) {
+      cursorHistory.value = [undefined]
+      hasNext.value = false
+    }
     // 假分页：本地切片，不发请求
     if (fullData.value) {
       data.value = fullData.value.slice((current.value - 1) * pageSize.value, current.value * pageSize.value)
@@ -366,14 +392,9 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
   }
 
   function handlePageChange(page: number) {
-    // 游标分页：只允许跳到「已有游标」的页（历史里存的）， jumper 直接输第 5 页会被拒——
-    // 未访问页没有游标，请求会退化成首屏却被当成第 5 页展示，数据错位
-    if (toValue(options.cursor)) {
-      const reachable =
-        page === 1 ||
-        (cursorHistory.value.length > page - 1 && cursorHistory.value[page - 1] !== undefined)
-      if (!reachable) return Promise.resolve()
-    }
+    // 游标分页：jumper 直接输第 5 页会被拒——未访问页没有游标，
+    // 请求会退化成首屏却被当成第 5 页展示，数据错位
+    if (toValue(options.cursor) && !isCursorPageReachable(page)) return Promise.resolve()
     current.value = page
     // 假分页：本地切片，不发请求
     if (fullData.value) {
@@ -440,6 +461,8 @@ export function useTable<T = any>(options: UseTableOptions<T>) {
     current,
     pageSize,
     sort,
+    /** 游标分页还有没有下一页。非游标模式恒 false */
+    hasNext,
     searchValues,
     selectedRows,
     selectedKeys,

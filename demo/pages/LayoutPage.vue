@@ -14,6 +14,12 @@ const menus: ProLayoutMenuItem[] = [
   { title: '仪表盘', path: '/dash' },
   { title: '订单管理', path: '/orders' },
   { title: '用户', path: '/users' },
+  { title: '外部文档', href: 'https://element-plus.org' },
+]
+
+/** 带 query 的菜单：router 模式跳转时 query 拼进路由参数，index 仍是 path */
+const queryMenus: ProLayoutMenuItem[] = [
+  { title: '用户（带 query）', path: '/users', query: { tab: 'audit' } },
 ]
 
 const controlledCollapsed = ref(false)
@@ -39,6 +45,26 @@ const boxStyle =
         style="min-height: 100%"
       >
         <p class="demo-p">非受控布局的内容区。</p>
+      </ElProLayout>
+    </div>
+  </div>
+
+  <div class="demo-card" style="margin-top: 16px">
+    <h3 class="demo-section-title">菜单外链与 query（href / query 字段）</h3>
+    <p class="demo-section-desc">
+      「外部文档」配了 href：点击新窗打开外链，不触发内部路由；「用户（带 query）」配了
+      query：router 模式跳转时拼进路由参数，菜单高亮仍按 path 匹配。第二张开了 router
+      模式并 mock 了跳转，实际项目里接 vue-router 后 push 的就是 { path, query }。
+    </p>
+    <div :style="boxStyle">
+      <ElProLayout
+        :menus="queryMenus"
+        active-path="/users"
+        router
+        title="带 query"
+        style="min-height: 100%"
+      >
+        <p class="demo-p">router 模式：点菜单项走 el-menu 的 router 跳转，query 随 route 对象传递。</p>
       </ElProLayout>
     </div>
   </div>

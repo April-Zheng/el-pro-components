@@ -46,4 +46,34 @@ describe('valueType 读态格式化（P1 #6 / #7 / #8 回归）', () => {
     expect(json.kind).toBe('code')
     expect(json.codeText).toBe('{\n  "a": 1\n}')
   })
+
+  describe('多值读态翻译 valueEnum（多选枚举显示原始值，不译文案）', () => {
+    const valueEnum = { a: { text: '苹果' }, b: { text: '香蕉' }, c: { text: '樱桃', status: 'success' } }
+
+    it('select 多值逐项翻译成枚举文案', () => {
+      expect(
+        resolveCell({ value: ['a', 'b'], valueType: 'select', valueEnum }).text,
+      ).toBe('苹果、香蕉')
+    })
+
+    it('checkbox / cascader / treeSelect 多值同样翻译', () => {
+      for (const vt of ['checkbox', 'cascader', 'treeSelect'] as const) {
+        expect(
+          resolveCell({ value: ['a', 'b'], valueType: vt, valueEnum }).text,
+        ).toBe('苹果、香蕉')
+      }
+    })
+
+    it('翻不到枚举的项保持原样，不吞值', () => {
+      expect(
+        resolveCell({ value: ['a', 'x'], valueType: 'select', valueEnum }).text,
+      ).toBe('苹果、x')
+    })
+
+    it('多值翻译不改变带状态枚举的单值行为（status 仍走 tag）', () => {
+      const cell = resolveCell({ value: 'c', valueType: 'status', valueEnum })
+      expect(cell.kind).toBe('status')
+      expect(cell.text).toBe('樱桃')
+    })
+  })
 })

@@ -286,6 +286,13 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
 
   if (value === null || value === undefined || value === '') return empty()
 
+  // 多值读态（select/checkbox 等多选是数组）：逐项过 valueEnum 翻译，
+  // 翻不到的项保持原样，不吞值。放在 switch 之前，让所有多值类型共用一条路径；
+  // 范围限定在真正的多值类型（MULTI_VALUE_TYPES），日期区间等数组型 valueType 不受影响
+  if (Array.isArray(value) && MULTI_VALUE_TYPES.includes(valueType)) {
+    return { kind: 'text', text: translateMultiValue(valueEnum, value), raw: value }
+  }
+
   if (isRangeType(valueType)) {
     if (!Array.isArray(value) || value.length < 2) {
       return { kind: 'text', text: String(value), raw: value }
@@ -436,11 +443,7 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
     case 'checkbox':
     case 'cascader':
     case 'treeSelect':
-      return {
-        kind: 'text',
-        text: Array.isArray(value) ? value.join('、') : String(value),
-        raw: value,
-      }
+      // 数组值已被前面的多值路径接走，这里只剩标量（罕见但合法），与 default 同体
     default:
       return { kind: 'text', text: String(value), raw: value }
   }
@@ -456,6 +459,28 @@ export const ENUM_VALUE_TYPES: ProValueType[] = [
   'status',
   'segmented',
 ]
+
+/**
+ * 值可能是数组的读态 valueType（多选场景）。
+ * resolveCell 对这些类型逐项过 valueEnum 翻译；
+ * 日期区间等数组型 valueType 不在列，不参与枚举翻译。
+ */
+export const MULTI_VALUE_TYPES: ProValueType[] = [
+  'select',
+  'radio',
+  'radioButton',
+  'checkbox',
+  'cascader',
+  'treeSelect',
+  'segmented',
+]
+
+/** 多值逐项翻译：翻得到用枚举文案，翻不到保持原样，不吞值 */
+function translateMultiValue(valueEnum: ValueEnum | undefined, values: unknown[]): string {
+  return values
+    .map((item) => resolveEnumItem(valueEnum, item)?.text ?? String(item))
+    .join('、')
+}
 
 /** 纯展示型 / 排版型，不该出现在表单、搜索栏里 */
 export const DISPLAY_ONLY_VALUE_TYPES: ProValueType[] = [

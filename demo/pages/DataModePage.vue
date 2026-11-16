@@ -90,6 +90,13 @@ const cursorColumns: ProColumn<Row>[] = [
   { prop: 'cursor', label: '本页游标', search: false, formatter: () => cursorHits.value.toString() },
 ]
 
+// hasNext 用实例方法实时读（setInterval 每 500ms 看一眼，与轮询演示同一节奏）
+const cursorTableRef = ref<InstanceType<typeof ElProTable>>()
+const cursorHasNext = ref(false)
+setInterval(() => {
+  cursorHasNext.value = cursorTableRef.value?.getHasNext() ?? false
+}, 500)
+
 /* --------------------------- 5. 受控分页 --------------------------- */
 
 /** 受控分页的值用 ref 持有：v-model 回写是整体赋值，const reactive 会抛 Assignment to constant */
@@ -183,12 +190,14 @@ const dataSourceJson = computed(() => JSON.stringify(dataSource.value))
       <h4>4. 游标分页 pagination.type='cursor'（请求带 nextToken，不带 current）</h4>
       <p class="hint">请求计数：{{ cursorHits }} 次 —— 只有「下一页」会发请求；跳到未访问页会被钳制（没有游标）</p>
       <ElProTable
+        ref="cursorTableRef"
         :columns="baseColumns"
         :request="requestCursor"
         :pagination="{ type: 'cursor' }"
         :search="false"
         title="共 4 页游标，翻完即止"
       />
+      <p class="hint">hasNext（实例方法实时读）：{{ cursorHasNext ? '还有下一页' : '没有下一页' }}</p>
     </section>
 
     <!-- 5. 受控分页 -->

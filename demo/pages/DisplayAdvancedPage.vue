@@ -2,7 +2,7 @@
 /**
  * 展示类组件补齐示例：批次 5 的能力逐块演示。
  */
-import { reactive, ref } from 'vue'
+import { h, reactive, ref } from 'vue'
 import { ElAlert, ElButton, ElMessage } from 'element-plus'
 import {
   ElProCard,
@@ -80,6 +80,15 @@ async function loadMore() {
 
 const groupModel = ref('basic')
 const ghostModel = ref(true)
+const outerNestedModel = ref('o1')
+const innerNestedModel = ref('i1')
+
+/* ------------------------- 3b. List onItem / itemRender ------------------------- */
+
+const renderListModel = ref('')
+function wrapItem(item: Msg, index: number, defaultDom: any) {
+  return h('div', { class: 'list-item-shell' }, [defaultDom])
+}
 
 /* ------------------------- 8. Skeleton 页面级 ------------------------- */
 </script>
@@ -129,6 +138,16 @@ const ghostModel = ref(true)
           <ElButton link type="primary" size="small" @click="ElMessage.info(`处理 ${item.title}`)">处理</ElButton>
         </template>
       </ElProList>
+
+      <p class="hint" style="margin-top: 12px">onItem：条目根绑定自定义事件/attrs（点击弹提示）；itemRender：给默认条目包壳</p>
+      <ElProList
+        :columns="listColumns"
+        :data-source="listData.slice(0, 2)"
+        :on-item="(item: Msg, index: number) => ({ 'data-rid': `row-${index}`, onClick: () => ElMessage.info(`点了 ${item.title}`) })"
+        :item-render="wrapItem"
+        :pagination="false"
+        row-key="id"
+      />
     </section>
 
     <!-- 4. CheckCardGroup / CheckCard -->
@@ -148,6 +167,16 @@ const ghostModel = ref(true)
             <ElButton size="small" @click="ElMessage.info('配置定时报告')">配置</ElButton>
           </template>
         </ElProCheckCard>
+      </ElProCheckCardGroup>
+      <div style="height: 12px" />
+      <p class="hint">嵌套子组：内层 Group 独立选中（provide 遮蔽，对齐 React 内层覆盖），外层不受扰</p>
+      <ElProCheckCardGroup v-model="outerNestedModel" :column="3">
+        <ElProCheckCard value="o1" title="外层 A" />
+        <ElProCheckCard value="o2" title="外层 B" />
+        <ElProCheckCardGroup v-model="innerNestedModel" :column="1">
+          <ElProCheckCard value="i1" title="内层 甲" />
+          <ElProCheckCard value="i2" title="内层 乙" />
+        </ElProCheckCardGroup>
       </ElProCheckCardGroup>
     </section>
 

@@ -142,4 +142,50 @@ describe('ElProCheckCard 独立 / 成组勾选', () => {
     expect(model.value).toBe('b')
     void click
   })
+
+  it('嵌套子组：内层 Group 独立选中，外层不受扰（provide 遮蔽对齐 React 内层覆盖）', async () => {
+    const outerModel = ref<string | number>('o1')
+    const innerModel = ref<string | number>('i1')
+    const { container } = mount(() =>
+      h(
+        ElProCheckCardGroup as any,
+        { modelValue: outerModel.value, 'onUpdate:modelValue': (v: any) => (outerModel.value = v) },
+        {
+          default: () => [
+            h(ElProCheckCard as any, { value: 'o1', title: '外1' }),
+            h(ElProCheckCard as any, { value: 'o2', title: '外2' }),
+            h(ElProCheckCardGroup as any, {
+              modelValue: innerModel.value,
+              'onUpdate:modelValue': (v: any) => (innerModel.value = v),
+            }, { default: () => [h(ElProCheckCard as any, { value: 'i1', title: '内1' }), h(ElProCheckCard as any, { value: 'i2', title: '内2' })] }),
+          ],
+        },
+      ),
+    )
+    // 卡片按树序收集：外层两张（外1/外2）在前，内层两张（内1/内2）在后
+    const cards: HostNode[] = []
+    const collect = (n: HostNode) => {
+      if (n.props?.role === 'checkbox') cards.push(n)
+      n.children.forEach(collect)
+    }
+    collect(container)
+    expect(cards.length).toBe(4)
+    // 初始选中态定位：外1、内1 是 checked（外层 o1、内层 i1）——验证树序判定没走偏
+    expect(cards[0].props['aria-checked']).toBe(true)
+    expect(cards[2].props['aria-checked']).toBe(true)
+    expect(cards[1].props['aria-checked']).toBe(false)
+    expect(cards[3].props['aria-checked']).toBe(false)
+
+    // 点内层的「内2」：内层变 i2，外层仍 o1
+    ;(cards[3].props.onClick as () => void)()
+    await nextTick()
+    expect(innerModel.value).toBe('i2')
+    expect(outerModel.value).toBe('o1')
+
+    // 再点外层的「外2」：外层变 o2，内层保持 i2
+    ;(cards[1].props.onClick as () => void)()
+    await nextTick()
+    expect(outerModel.value).toBe('o2')
+    expect(innerModel.value).toBe('i2')
+  })
 })

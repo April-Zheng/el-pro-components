@@ -974,6 +974,8 @@ defineExpose({
    */
   getTotal: () => table.total.value,
   getPage: () => ({ current: table.current.value, pageSize: table.pageSize.value }),
+  /** 游标分页还有没有下一页。非游标模式恒 false——分页器从 total 猜不出这个 */
+  getHasNext: () => table.hasNext.value,
   /** 轮询请求进行中。页面要让刷新图标单独转圈时用 */
   getPollingLoading: () => pollingLoading.value,
   /* ---- 行内编辑 ---- */

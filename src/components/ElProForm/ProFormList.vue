@@ -8,10 +8,11 @@
  * 代价是**下标会随增删漂移**，所以 v-for 的 key 必须换成稳定的符号键，
  * 否则删掉第 1 项后，剩下几项的输入框会跟错行。
  */
-import { computed, inject, onMounted, toRaw, watch } from 'vue'
+import { computed, inject, onMounted, watch } from 'vue'
 import { ElButton, ElCol, ElFormItem, ElRow } from 'element-plus'
 import FormField from '../../fields/FormField.vue'
 import { resolveFormColumns } from '../../core/formDependency'
+import { cloneDraft } from '../../core/deepToRaw'
 import { PRO_FORM_READONLY } from '../../core/formContext'
 import type { ProColumn, ProFormListConfig } from '../../types'
 
@@ -174,13 +175,9 @@ function bindActionRef() {
 function copy(index: number) {
   if (!canAdd.value) return
   const source = list.value[index]
-  let cloned: ListRow
-  try {
-    // toRaw：响应式代理直接 structuredClone 会抛 DataCloneError，退浅拷贝会污染源行
-    cloned = structuredClone(toRaw(source))
-  } catch {
-    cloned = { ...source }
-  }
+  // cloneDraft 走 core/deepToRaw：递归解代理再 structuredClone，
+  // 嵌套 reactive 子对象退浅拷贝会污染源行，不能用一次性 toRaw
+  const cloned = cloneDraft(source)
   cloned[ROW_KEY] = ++uid
   list.value.splice(index + 1, 0, cloned)
 }

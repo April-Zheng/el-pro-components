@@ -108,6 +108,49 @@ describe('useTable 进阶数据生命周期（批次 2 回归）', () => {
     expect(table.total.value).toBe(30) // 没有下一页
   })
 
+  it('hasNext 随加载结果更新：有 nextToken 为 true，末页为 false', async () => {
+    const request = vi.fn(async (params: any) => {
+      const page = Number(params.nextToken?.slice?.('token-'.length) ?? 0) + 1
+      return {
+        data: [{ id: page }],
+        nextToken: page < 2 ? `token-${page}` : undefined,
+      } as ProRequestResult
+    }) as ProRequest
+
+    const table = useTable({ request, cursor: true, defaultPageSize: 10 })
+
+    await flush()
+    expect(table.hasNext.value).toBe(true) // 首屏有 token-1
+
+    await table.action.setPage({ current: 2 })
+    expect(table.hasNext.value).toBe(false) // token-2 之后无下一页
+  })
+
+  it('setPage 跳到未访问页被拒（与 handlePageChange 同一可达性约束）', async () => {
+    const payloads: any[] = []
+    const request = vi.fn(async (params: any) => {
+      payloads.push(params)
+      // 只有首屏回包带下一页游标；第 2 页之后没有更多数据
+      return {
+        data: [{ id: payloads.length }],
+        nextToken: payloads.length === 1 ? 'token-1' : undefined,
+      } as ProRequestResult
+    }) as ProRequest
+
+    const table = useTable({ request, cursor: true, defaultPageSize: 10 })
+    await flush()
+    expect(payloads).toHaveLength(1) // 首屏
+
+    // 已访问到第 2 页的游标，跳第 2 页可达
+    await table.action.setPage({ current: 2 })
+    expect(payloads).toHaveLength(2)
+
+    // 第 3 页从未访问过，跳页被拒、不发请求
+    await table.action.setPage({ current: 3 })
+    expect(payloads).toHaveLength(2)
+    expect(table.current.value).toBe(2)
+  })
+
   it('受控数据模式：不发请求，commitData 交还外部', async () => {
     const request = vi.fn() as unknown as ProRequest
     const onDataSourceChange = vi.fn()

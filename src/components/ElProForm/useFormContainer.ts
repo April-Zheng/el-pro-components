@@ -45,21 +45,15 @@ interface FormContainerEvents {
  * 用 structuredClone 而不是 `{...}`：像日期区间这种字段是数组，
  * 浅拷贝会让草稿和原行共享同一个数组，在草稿里改完取消，原行也跟着变了。
  * structuredClone 遇到函数、DOM 节点会抛错，这时退回浅拷贝——总比崩了好。
- * 注意必须先 `toRaw`：Vue 的响应式代理直接丢给 structuredClone 会抛 DataCloneError，
+ * 注意必须先解代理：Vue 的响应式代理直接丢给 structuredClone 会抛 DataCloneError，
  * 而业务传进来的 initialValues 恰恰十有八九是 reactive 的。
+ * 解代理 + 深拷贝都走 core/deepToRaw 的 cloneDraft——递归 toRaw 的那套逻辑
+ * 两个调用点（这里和 ProFormList.copy）共用，不要各自内联。
  */
-import { toRaw } from 'vue'
+import { cloneDraft } from '../../core/deepToRaw'
 
 function cloneSeed<T>(source: T): T {
-  if (source === null || typeof source !== 'object') return source
-  if (typeof structuredClone === 'function') {
-    try {
-      return structuredClone(toRaw(source))
-    } catch {
-      /* 含不可克隆的值，退回浅拷贝 */
-    }
-  }
-  return (Array.isArray(source) ? [...source] : { ...(source as object) }) as T
+  return cloneDraft(source)
 }
 
 export function useFormContainer(props: ProFormContainerProps, events: FormContainerEvents) {
