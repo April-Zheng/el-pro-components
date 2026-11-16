@@ -5,7 +5,7 @@
  * 只做展示，不碰数据。自定义渲染优先用列插槽（#propName），
  * 需要跨表复用逻辑时再传 column.cellComponent。
  */
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElAvatar, ElImage, ElProgress, ElRate, ElTag, ElTooltip } from 'element-plus'
 import { resolveCell } from '../core/valueType'
 import type { ProColumn } from '../types'
@@ -36,6 +36,28 @@ const resolved = computed(() => {
 
 const copyable = computed(() => !!props.column.copyable && resolved.value.kind !== 'empty')
 
+/** 复制成功反馈：图标短暂变 ✓（对齐 antd Typography 的安静反馈，不弹 ElMessage） */
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+async function handleCopy() {
+  try {
+    await navigator.clipboard.writeText(resolved.value.text)
+    copied.value = true
+    if (copiedTimer) clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copied.value = false
+      copiedTimer = null
+    }, 1500)
+  } catch {
+    /* 剪贴板不可用时静默降级，不打断用户操作，也不进成功态 */
+  }
+}
+
+onBeforeUnmount(() => {
+  if (copiedTimer) clearTimeout(copiedTimer)
+})
+
 /** ellipsis：溢出时才出 tooltip。手动控制可见性——EP 的 tooltip 在 mouseenter 同步读 disabled，
  * 若用 disabled 门控，首次悬浮时量宽结果还没生效，会导致第一次不出 tooltip */
 const ellipsis = computed(() => !!props.column.ellipsis && resolved.value.kind === 'text')
@@ -56,18 +78,17 @@ watch(
     ellipsisVisible.value = false
   },
 )
-
-async function handleCopy() {
-  try {
-    await navigator.clipboard.writeText(resolved.value.text)
-  } catch {
-    /* 剪贴板不可用时静默降级，不打断用户操作 */
-  }
-}
 </script>
 
 <template>
-  <span v-if="resolved.kind === 'empty'" class="el-pro-cell__empty">{{ resolved.text }}</span>
+  <!-- indexBorder：圆底序号徽章，对齐 React IndexColumn border（序号 > 3 变灰） -->
+  <span
+    v-if="column.valueType === 'indexBorder' && resolved.kind === 'text'"
+    class="el-pro-index-badge"
+    :class="{ 'is-top-three': Number(resolved.text) > 3 }"
+  >{{ resolved.text }}</span>
+
+  <span v-else-if="resolved.kind === 'empty'" class="el-pro-cell__empty">{{ resolved.text }}</span>
 
   <ElAvatar
     v-else-if="resolved.kind === 'avatar'"
@@ -143,9 +164,12 @@ async function handleCopy() {
       @mouseleave="onTextLeave"
     >
       <span class="el-pro-cell__ellipsis">{{ resolved.text }}</span>
-      <ElTooltip v-if="copyable" content="复制" placement="top" :show-after="300">
+      <ElTooltip v-if="copyable" :content="copied ? '已复制' : '复制'" placement="top" :show-after="300">
         <span class="el-pro-cell__copy" role="button" tabindex="0" @click.stop="handleCopy">
-          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2">
+          <svg v-if="copied" class="el-pro-cell__copy-check" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 8.5 6.5 12 13 4.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <svg v-else viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2">
             <rect x="5.5" y="5.5" width="8" height="8" rx="1.6" />
             <path d="M10.5 5.5V4A1.6 1.6 0 0 0 8.9 2.4H4A1.6 1.6 0 0 0 2.4 4v4.9A1.6 1.6 0 0 0 4 10.5h1.5" />
           </svg>
@@ -245,4 +269,25 @@ async function handleCopy() {
 .el-pro-cell__status.is-danger { color: var(--el-color-danger); }
 .el-pro-cell__status.is-info { color: var(--el-color-info); }
 .el-pro-cell__status.is-custom { color: var(--el-text-color-regular); }
+
+/*
+ * indexBorder 圆底序号徽章，对齐 React IndexColumn border 的配色。
+ * 色值用 CSS 变量暴露：主题可覆盖默认的深灰/浅灰两档
+ */
+.el-pro-index-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 12px;
+  background: var(--el-pro-index-badge-bg, #314659);
+  border-radius: 9px;
+}
+.el-pro-index-badge.is-top-three {
+  background: var(--el-pro-index-badge-dim-bg, #979797);
+}
 </style>

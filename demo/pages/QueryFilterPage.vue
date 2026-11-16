@@ -40,6 +40,12 @@ const model = reactive<Record<string, any>>({ status: 'pending' })
 
 const loading = ref(false)
 const submitted = ref('')
+const preserveModel = reactive<Record<string, any>>({ f1: 'a', f5: '收起区里的值' })
+const preserveSubmitted = ref('')
+
+function onPreserveSearch(values: Record<string, any>) {
+  preserveSubmitted.value = JSON.stringify(values)
+}
 
 function onSearch(values: Record<string, any>) {
   loading.value = true
@@ -70,6 +76,24 @@ function onReset(values: Record<string, any>) {
       @search="onSearch"
       @reset="onReset"
     />
+  </div>
+
+  <div class="demo-card">
+    <h3 class="demo-section-title">preserve / layout / showHiddenNum（批次⑥）</h3>
+    <p class="demo-section-desc">
+      preserve=false：收起隐藏的字段值不进 search 负载（下面的提交结果里验证）；
+      layout='vertical'：label 置顶；showHiddenNum 现默认 false，显式传 true 才显示藏了几项。
+    </p>
+    <ElProQueryFilter
+      :columns="columns"
+      :model="preserveModel"
+      :preserve="false"
+      layout="vertical"
+      :show-hidden-num="true"
+      @search="onPreserveSearch"
+      @reset="onReset"
+    />
+    <p class="demo-section-desc">preserve=false 的提交结果：{{ preserveSubmitted }}</p>
   </div>
 
   <div class="demo-card">

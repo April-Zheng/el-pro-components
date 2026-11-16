@@ -76,4 +76,19 @@ describe('valueType 读态格式化（P1 #6 / #7 / #8 回归）', () => {
       expect(cell.text).toBe('樱桃')
     })
   })
+
+  describe('code 收到对象值复用 pretty-print（批次6⑤）', () => {
+    it('code 对对象/数组自动 pretty-print', () => {
+      const cell = resolveCell({ value: { a: 1 }, valueType: 'code' })
+      expect(cell.kind).toBe('code')
+      expect(cell.codeText).toBe('{\n  "a": 1\n}')
+      const arr = resolveCell({ value: [1, 2], valueType: 'code' })
+      expect(arr.codeText).toBe('[\n  1,\n  2\n]')
+    })
+
+    it('jsonCode 行为不变', () => {
+      expect(resolveCell({ value: { a: 1 }, valueType: 'jsonCode' }).codeText).toBe('{\n  "a": 1\n}')
+      expect(resolveCell({ value: 'const a = 1', valueType: 'code' }).codeText).toBe('const a = 1')
+    })
+  })
 })

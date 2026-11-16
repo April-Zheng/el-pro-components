@@ -231,6 +231,12 @@ const DATE_TYPE_FORMATS: Partial<Record<ProValueType, string>> = {
   dateYear: 'YYYY',
 }
 
+/** 周格式：YYYY 第 w 周（ISO 周序号），dateWeek 读态专用 */
+function formatWeek(value: any): string {
+  const d = parseDate(value)
+  return d ? `${d.getFullYear()} 第 ${getISOWeek(value)} 周` : String(value)
+}
+
 const isRangeType = (vt: ProValueType) =>
   vt === 'dateRange' ||
   vt === 'dateTimeRange' ||
@@ -400,14 +406,8 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
       }
     case 'dateQuarter':
       return { kind: 'text', text: formatQuarter(value), raw: value }
-    case 'dateWeek': {
-      const d = parseDate(value)
-      return {
-        kind: 'text',
-        text: d ? `${d.getFullYear()} 第 ${getISOWeek(value)} 周` : String(value),
-        raw: value,
-      }
-    }
+    case 'dateWeek':
+      return { kind: 'text', text: formatWeek(value), raw: value }
     case 'fromNow':
       return { kind: 'text', text: formatFromNow(value), raw: value }
     case 'switch':
@@ -429,9 +429,9 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
       return { kind: 'image', text: String(value), src: String(value), raw: value }
     case 'code':
     case 'jsonCode': {
-      // 对齐 React Code：读态用 <pre> 块呈现；jsonCode 对对象/数组自动 pretty-print
+      // 对齐 React Code：读态用 <pre> 块呈现；对象/数组（无论 code 还是 jsonCode）自动 pretty-print
       const text =
-        valueType === 'jsonCode' && value !== null && typeof value === 'object'
+        value !== null && typeof value === 'object'
           ? JSON.stringify(value, null, 2)
           : String(value)
       return { kind: 'code', text, codeText: text, raw: value }

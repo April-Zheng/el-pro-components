@@ -89,6 +89,16 @@ export type ValueType =
    */
   | 'formList'
   /**
+   * 依赖字段驱动子字段：`dependencyName` 写依赖路径，`dependencyColumns`
+   * 是数组或按依赖值当前值的函数（对齐源码 valueType/dependency）。只作用于表单。
+   */
+  | 'dependency'
+  /**
+   * 字段集绑数组：每个子字段按出现顺序绑 `prop` 数组的 index，子字段写在
+   * `columns` 里（对齐源码 valueType/formSet 的 ProFormFieldSet）。只作用于表单。
+   */
+  | 'formSet'
+  /**
    * 表单分组：标题栏（可折叠）+ 一块子字段区域。子字段写在 `columns` 里，
    * **不是 `children`** —— 和源码 valueType/group 的取值一致（`children` 在表格里
    * 是分组表头、在 formList 里是子字段，`columns` 专属 group）。只作用于表单。
@@ -447,8 +457,18 @@ export interface ProQueryFilterProps {
   gutter?: number
   /** 上下排列（`labelPosition: 'top'`）时在行之间画分割线 @default false */
   split?: boolean
-  /** 折叠时在展开按钮上显示藏了几项 @default true */
+  /** 折叠时在展开按钮上显示藏了几项 @default false（对齐 React 默认） */
   showHiddenNum?: boolean
+  /**
+   * 收起隐藏的字段值是否随 search 一起发出 @default true（对齐 React）。
+   * false 时收起即不保留：search 负载只含当前渲染中的字段
+   */
+  preserve?: boolean
+  /**
+   * 布局方向，对齐 React QueryFilter 的 layout。vertical 映射 label 置顶；
+   * 不传时用 labelPosition 的既有行为
+   */
+  layout?: 'horizontal' | 'vertical' | 'inline'
 }
 
 /**
@@ -908,6 +928,16 @@ export interface ProColumn<T = any> {
    * 源码（SchemaForm/valueType/group）取的是 `item.columns`，不是 `children`。
    */
   columns?: ProColumn<T>[]
+
+  /**
+   * `valueType: 'dependency'` 时的**依赖子字段**：数组或按依赖字段当前值的函数，
+   * 对齐 React 的 `columns(values) => []`（依赖字段列表写在 `dependencyName`）。
+   * 子字段渲染一层普通字段循环，不支持再嵌 group/formList（文档已声明取舍）。
+   */
+  dependencyColumns?: ProColumn<T>[] | ((values: Record<string, any>) => ProColumn<T>[])
+
+  /** `valueType: 'dependency'` 时的依赖字段路径（同 dependsOn 同款字符串，支持 `a.b`） */
+  dependencyName?: string | string[]
 
   /** `valueType: 'group'` 时的分组容器配置（title/collapsible/direction/size 等） */
   groupProps?: ProFormGroupProps

@@ -57,6 +57,35 @@ const depColumns: ProColumn[] = [
   { prop: 'inviteCode', label: '邀请码', dependency: { dependsOn: ['channel'], visible: (v) => v.channel === 'ground' } },
 ]
 
+/* ------------------------- 2b. formSet / dependency valueType（批次⑥） ------------------------- */
+
+const setModel = reactive({ range: [10, 99] })
+const setColumns: ProColumn[] = [
+  {
+    prop: 'range',
+    label: '数值区间（formSet）',
+    valueType: 'formSet',
+    columns: [
+      { prop: 'min', label: '最小值', valueType: 'number' },
+      { prop: 'max', label: '最大值', valueType: 'number' },
+    ],
+  },
+] as unknown as ProColumn[]
+
+const dynModel = reactive({ type: 'a', extA: '', extB: '' })
+const dynColumns: ProColumn[] = [
+  { prop: 'type', label: '类型', valueType: 'segmented', valueEnum: { a: 'A 类', b: 'B 类' } },
+  {
+    prop: 'ext',
+    valueType: 'dependency',
+    dependencyName: 'type',
+    dependencyColumns: (values: Record<string, any>) =>
+      values.type === 'a'
+        ? [{ prop: 'extA', label: 'A 专属字段', valueType: 'text' }]
+        : [{ prop: 'extB', label: 'B 专属字段', valueType: 'text' }],
+  },
+] as unknown as ProColumn[]
+
 /* ------------------------- 3. 表单级只读 ------------------------- */
 
 const readonlyModel = reactive({ name: '张三', role: 'admin', amount: 1234.5 })
@@ -174,6 +203,14 @@ const fieldColumns: ProColumn[] = [
           <div v-else class="demo-dep-tip">当前渠道是「App」：邀请码由系统自动生成</div>
         </template>
       </ElProFormDependency>
+    </section>
+
+    <!-- 2b. formSet / dependency valueType -->
+    <section>
+      <h4>2b. formSet 字段集绑数组 + dependency valueType 依赖子字段（批次⑥）</h4>
+      <p class="hint">formSet：两个子字段按出现顺序绑 range[0]/range[1]；dependency：切类型后子字段跟着换</p>
+      <ElProForm :columns="setColumns" :model="setModel" :show-actions="false" />
+      <ElProForm :columns="dynColumns" :model="dynModel" :show-actions="false" />
     </section>
 
     <!-- 3. 表单级只读 -->

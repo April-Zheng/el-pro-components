@@ -33,6 +33,15 @@ const baseColumns: ProColumn<Row>[] = [
   { prop: 'amount', label: '金额', valueType: 'money' },
 ]
 
+/* --------------------------- 6b. indexBorder 徽章 / copyable / code（批次⑥） --------------------------- */
+
+const badgeData = [
+  { id: 1, name: '第一行', meta: { src: 'api/v1', retries: 2 } },
+  { id: 2, name: '第二行', meta: { src: 'api/v2', retries: 0 } },
+  { id: 3, name: '第三行', meta: { src: 'api/v3', retries: 1 } },
+  { id: 4, name: '第四行', meta: { src: 'api/v4', retries: 3 } },
+]
+
 /* --------------------------- 7. 列 formatter --------------------------- */
 
 const formatterColumns: ProColumn<Row>[] = [
@@ -209,6 +218,23 @@ function onDragSortEnd(rows: Row[]) {
         :column-setting="{ listHeight: 160, checkable: true, draggable: true }"
         show-summary
         :summary-method="summaryMethod"
+      />
+    </section>
+
+    <!-- 6b. indexBorder 徽章 + copyable 反馈 + code 对象值（批次⑥） -->
+    <section>
+      <h4>6b. indexBorder 圆底序号（序号 > 3 变灰）+ copyable 复制成功图标变 ✓ + code 对象 pretty-print（批次⑥）</h4>
+      <p class="hint">ID 列是圆底徽章；「名称」悬浮出复制图标，点击后变 ✓；「描述」列用 code 展示对象 JSON</p>
+      <ElProTable
+        :columns="[
+          { prop: 'id', label: 'ID', valueType: 'indexBorder', width: 64, search: false },
+          { prop: 'name', label: '名称', copyable: true },
+          { prop: 'meta', label: '描述（code）', valueType: 'code', search: false },
+        ]"
+        :data-source="badgeData"
+        :search="false"
+        :pagination="false"
+        row-key="id"
       />
     </section>
 

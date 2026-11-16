@@ -35,7 +35,8 @@ const props = withDefaults(defineProps<ProQueryFilterProps>(), {
   labelPosition: 'right',
   gutter: 16,
   split: false,
-  showHiddenNum: true,
+  showHiddenNum: false,
+  preserve: true,
 })
 
 const emit = defineEmits<{
@@ -105,7 +106,20 @@ function search() {
   // 校验门禁：与 ElProLightFilter 一致，规则不过就不发 search（React 走 form.submit 同语义）
   formRef.value
     ?.validate()
-    .then(() => emit('search', snapshot(formModel.value)))
+    .then(() => {
+      // preserve=false：收起隐藏的字段值不进 search 负载（对齐 React 的 preserve 语义——
+      // 收起即不保留，清掉历史；默认 preserve 只在 unmount 时清）。渲染中的列才是要提交的
+      if (props.preserve === false) {
+        const kept = new Set(renderedColumns.value.map(({ column }) => column.prop))
+        const filtered: Record<string, any> = {}
+        for (const [key, value] of Object.entries(formModel.value)) {
+          if (kept.has(key)) filtered[key] = value
+        }
+        emit('search', filtered)
+        return
+      }
+      emit('search', snapshot(formModel.value))
+    })
     .catch(() => {})
 }
 
@@ -155,7 +169,12 @@ const renderedColumns = computed(() =>
 )
 
 const showCollapseButton = computed(() => props.collapsible && layout.value.needCollapse)
-const splitLine = computed(() => props.split && props.labelPosition === 'top')
+const splitLine = computed(() => props.split && effectiveLabelPosition.value === 'top')
+
+/** layout='vertical' 映射 label 置顶（对齐 React QueryFilter 的 layout）；不传时用既有 labelPosition */
+const effectiveLabelPosition = computed(() =>
+  props.layout === 'vertical' ? 'top' : (props.labelPosition ?? 'right'),
+)
 
 defineExpose({
   search,
@@ -174,8 +193,8 @@ defineExpose({
     ref="formRef"
     class="el-pro-query-filter"
     :model="formModel"
-    :label-width="labelWidth"
-    :label-position="labelPosition"
+    :label-width="effectiveLabelPosition === 'top' ? undefined : labelWidth"
+    :label-position="effectiveLabelPosition"
     @submit.prevent="search"
   >
     <ElRow :gutter="gutter">

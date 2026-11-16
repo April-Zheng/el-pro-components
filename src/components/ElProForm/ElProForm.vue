@@ -11,6 +11,7 @@ import type { FormInstance } from 'element-plus'
 import { resolveFormColumns } from '../../core/formDependency'
 import { PRO_FORM_READONLY } from '../../core/formContext'
 import FormField from '../../fields/FormField.vue'
+import ElProFormDependency from './ElProFormDependency.vue'
 import ProFormList from './ProFormList.vue'
 import ProFormGroup from './ProFormGroup.vue'
 import type { ProColumn } from '../../types'
@@ -96,6 +97,20 @@ const formColumns = computed(() => {
 })
 
 const getSpan = (col: ProColumn) => col.formSpan ?? props.span
+
+/** dependency 的子列：函数形态按依赖字段当前值生成（对齐源码 columns(values)） */
+const resolveDependencyColumns = (col: ProColumn, values: Record<string, any>): ProColumn[] => {
+  const def = col.dependencyColumns
+  if (typeof def === 'function') return def(values) ?? []
+  return def ?? []
+}
+
+/** formSet 的子字段按出现顺序绑数组 index：改一个槽位，整体替换后写回 */
+function setFormSetPart(prop: string, index: number, v: any) {
+  const arr = [...(props.model[prop] ?? [])]
+  arr[index] = v
+  props.model[prop] = arr
+}
 
 async function validate() {
   if (!formRef.value) return false
@@ -219,6 +234,59 @@ defineExpose({
               :span="col.formListProps?.span"
               :gutter="col.formListProps?.gutter ?? gutter"
             />
+          </ElFormItem>
+        </ElCol>
+
+        <!--
+          依赖字段驱动子字段：dependencyColumns 是数组或按依赖值的函数，
+          对齐源码 valueType/dependency 的 columns(values) => []。
+          子字段只支持一层普通字段循环（取舍已在类型注释声明）。
+        -->
+        <ElCol v-else-if="col.valueType === 'dependency'" :span="24">
+          <ElProFormDependency :model="model" :name="col.dependencyName ?? col.prop!">
+            <template #default="{ values }">
+              <ElRow :gutter="gutter">
+                <ElCol
+                  v-for="(sub, subIndex) in resolveDependencyColumns(col, values)"
+                  :key="sub.prop ?? subIndex"
+                  :span="getSpan(sub)"
+                >
+                  <ElFormItem
+                    :label="sub.label"
+                    :prop="sub.prop"
+                    :rules="sub.rules"
+                    v-bind="sub.formItemProps"
+                  >
+                    <FormField v-model="model[sub.prop!]" :column="sub" mode="form" :form-readonly="readonly" />
+                  </ElFormItem>
+                </ElCol>
+              </ElRow>
+            </template>
+          </ElProFormDependency>
+        </ElCol>
+
+        <!--
+          字段集绑数组：每个子字段按出现顺序绑 prop 数组的 index，
+          对齐源码 valueType/formSet 的 ProFormFieldSet（横排一组）。
+        -->
+        <ElCol v-else-if="col.valueType === 'formSet'" :span="col.formSpan ?? 24">
+          <ElFormItem
+            :label="col.label"
+            :prop="col.prop"
+            :rules="col.rules"
+            v-bind="col.formItemProps"
+          >
+            <div class="el-pro-form__fieldset">
+              <FormField
+                v-for="(sub, subIndex) in col.columns ?? []"
+                :key="sub.prop ?? subIndex"
+                :model-value="model[col.prop!]?.[subIndex]"
+                :column="sub"
+                mode="form"
+                :form-readonly="readonly"
+                @update:model-value="(v: any) => setFormSetPart(col.prop!, subIndex, v)"
+              />
+            </div>
           </ElFormItem>
         </ElCol>
 
