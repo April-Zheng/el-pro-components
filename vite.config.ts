@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
       },
       cssCodeSplit: false,
       rollupOptions: {
-        external: ['vue', 'element-plus'],
+        external: ['vue', 'element-plus', 'monaco-editor'],
         output: {
           globals: { vue: 'Vue', 'element-plus': 'ElementPlus' },
           exports: 'named',

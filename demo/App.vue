@@ -31,6 +31,7 @@ import FormAdvancedPage from './pages/FormAdvancedPage.vue'
 import DisplayAdvancedPage from './pages/DisplayAdvancedPage.vue'
 import PlaceholderPage from './pages/PlaceholderPage.vue'
 import ProviderPage from './pages/ProviderPage.vue'
+import CodeEditorPage from './pages/CodeEditorPage.vue'
 
 const active = ref(initialPage())
 </script>
@@ -68,6 +69,7 @@ const active = ref(initialPage())
     <FormAdvancedPage v-else-if="active === '/form-advanced'" />
     <DisplayAdvancedPage v-else-if="active === '/display-advanced'" />
     <ProviderPage v-else-if="active === '/provider'" />
+    <CodeEditorPage v-else-if="active === '/code-editor'" />
     <PlaceholderPage v-else :path="active" />
 
     <template #footer>

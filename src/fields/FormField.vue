@@ -35,6 +35,7 @@ import { enumToOptions } from '../core/valueType'
 import { PRO_CONFIG, EMPTY_PRO_CONFIG } from '../core/configContext'
 import { PRO_FORM_READONLY } from '../core/formContext'
 import CellRenderer from './CellRenderer.vue'
+import ElProCodeEditor from '../components/ElProCodeEditor/ElProCodeEditor.vue'
 
 /**
  * 自定义 valueType 编辑态的宿主，理由同 CellRenderer 的 VNodeHost：
@@ -72,6 +73,9 @@ const effectiveType = computed(() => {
   if (!props.column.valueType && props.column.valueEnum) return 'select'
   return vt
 })
+
+/** 只读展示时 codeEditor 退化为 code 形态（CellRenderer 的代码块） */
+const displayType = computed(() => (effectiveType.value === 'codeEditor' ? 'code' : effectiveType.value))
 
 const mergedProps = computed(() => {
   const base: Record<string, any> = { ...(props.column.fieldProps ?? {}) }
@@ -241,7 +245,7 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
   <CellRenderer
     v-if="isReadonlyDisplay"
     :value="modelValue"
-    :column="column"
+    :column="{ ...column, valueType: displayType }"
   />
 
   <!-- 自定义控件优先级最高 -->
@@ -259,6 +263,19 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
     v-else-if="customNode"
     :node="customNode"
     class="el-pro-field__custom"
+  />
+
+  <!-- 代码编辑器：Monaco 动态加载，可选依赖。fieldProps.options 拍平进 options，fieldProps 其余键（language/height）也一并生效 -->
+  <ElProCodeEditor
+    v-else-if="effectiveType === 'codeEditor'"
+    :model-value="modelValue ?? ''"
+    :height="mergedProps.height ?? 200"
+    :language="mergedProps.language"
+    :theme="mergedProps.theme"
+    :read-only="mergedProps.disabled === true"
+    :options="{ ...mergedProps, ...(mergedProps.options ?? {}) }"
+    class="el-pro-field--full"
+    @update:model-value="(v: string) => emit('update:modelValue', v)"
   />
 
   <!-- 数值 -->

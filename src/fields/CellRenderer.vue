@@ -43,8 +43,9 @@ const customNode = computed<VNode | string | null>(() => {
 const resolved = computed(() => {
   const vt = props.column.valueType
   const hasEnum = !!props.column.valueEnum
-  // 与 ProComponents 一致：没显式写 valueType 但配了 valueEnum 时，按 select 语义走 tag
-  const effective = !vt && hasEnum ? 'tag' : vt
+  // 与 ProComponents 一致：没显式写 valueType 但配了 valueEnum 时，按 select 语义走 tag；
+  // codeEditor（Monaco 编辑态词汇）在只读展示里按 code 形态走
+  const effective = !vt && hasEnum ? 'tag' : vt === 'codeEditor' ? 'code' : vt
   return resolveCell({
     value: props.value,
     valueType: effective,

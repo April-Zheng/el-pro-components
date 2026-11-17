@@ -30,6 +30,7 @@ export const menus: ProLayoutMenuItem[] = [
   { title: '表单能力补齐', path: '/form-advanced' },
   { title: '展示类补齐', path: '/display-advanced' },
   { title: '全局配置', path: '/provider' },
+  { title: '代码编辑器', path: '/code-editor' },
   {
     title: '分组菜单',
     children: [

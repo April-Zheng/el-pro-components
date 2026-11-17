@@ -1,76 +1,83 @@
 {
-	"name": "el-pro-components",
-	"version": "0.2.0",
-	"description": "Element Plus 体系的 Pro 高阶模板组件：ProTable / ProForm / ProDescriptions / ProLayout，由列 schema 驱动，内置 valueType 渲染器与请求生命周期",
-	"type": "module",
-	"main": "./dist/el-pro.umd.cjs",
-	"module": "./dist/el-pro.js",
-	"types": "./dist/index.d.ts",
-	"files": [
-		"dist"
-	],
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/el-pro.js",
-			"require": "./dist/el-pro.umd.cjs"
-		},
-		"./style.css": "./dist/el-pro.css",
-		"./package.json": "./package.json"
-	},
-	"sideEffects": [
-		"**/*.css"
-	],
-	"keywords": [
-		"vue3",
-		"element-plus",
-		"pro-table",
-		"pro-form",
-		"schema",
-		"crud"
-	],
-	"license": "MIT",
-	"author": "April-Zheng",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/April-Zheng/el-pro-components.git"
-	},
-	"homepage": "https://github.com/April-Zheng/el-pro-components#readme",
-	"bugs": {
-		"url": "https://github.com/April-Zheng/el-pro-components/issues"
-	},
-	"scripts": {
-		"dev": "vite",
-		"build": "vite build --mode lib",
-		"build:demo": "vite build",
-		"preview": "vite preview",
-		"test": "vitest run",
-		"typecheck": "vue-tsc --noEmit",
-		"prepublishOnly": "npm run typecheck && npm run test && npm run build",
-		"docs:dev": "vitepress dev docs --port 5288",
-		"docs:build": "vitepress build docs",
-		"docs:preview": "vitepress preview docs --port 5288"
-	},
-	"peerDependencies": {
-		"element-plus": "^2.8.0",
-		"vue": "^3.3.0"
-	},
-	"devDependencies": {
-		"@types/node": "^20.14.0",
-		"@types/sortablejs": "^1.15.9",
-		"@vitejs/plugin-vue": "^5.1.0",
-		"element-plus": "^2.8.0",
-		"happy-dom": "^21.0.4",
-		"typescript": "~5.4.5",
-		"vite": "^5.4.0",
-		"vite-plugin-dts": "^4.0.0",
-		"vitepress": "^1.6.4",
-		"vitest": "^2.1.9",
-		"vue": "^3.4.0",
-		"vue-tsc": "^2.1.10"
-	},
-	"dependencies": {
-		"async-validator": "^4.2.5",
-		"sortablejs": "^1.15.7"
-	}
+  "name": "el-pro-components",
+  "version": "0.2.0",
+  "description": "Element Plus 体系的 Pro 高阶模板组件：ProTable / ProForm / ProDescriptions / ProLayout，由列 schema 驱动，内置 valueType 渲染器与请求生命周期",
+  "type": "module",
+  "main": "./dist/el-pro.umd.cjs",
+  "module": "./dist/el-pro.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/el-pro.js",
+      "require": "./dist/el-pro.umd.cjs"
+    },
+    "./style.css": "./dist/el-pro.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "keywords": [
+    "vue3",
+    "element-plus",
+    "pro-table",
+    "pro-form",
+    "schema",
+    "crud"
+  ],
+  "license": "MIT",
+  "author": "April-Zheng",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/April-Zheng/el-pro-components.git"
+  },
+  "homepage": "https://github.com/April-Zheng/el-pro-components#readme",
+  "bugs": {
+    "url": "https://github.com/April-Zheng/el-pro-components/issues"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --mode lib",
+    "build:demo": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "docs:dev": "vitepress dev docs --port 5288",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs --port 5288"
+  },
+  "peerDependencies": {
+    "element-plus": "^2.8.0",
+    "vue": "^3.3.0",
+    "monaco-editor": ">=0.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/sortablejs": "^1.15.9",
+    "@vitejs/plugin-vue": "^5.1.0",
+    "element-plus": "^2.8.0",
+    "happy-dom": "^21.0.4",
+    "monaco-editor": "^0.57.0",
+    "typescript": "~5.4.5",
+    "vite": "^5.4.0",
+    "vite-plugin-dts": "^4.0.0",
+    "vitepress": "^1.6.4",
+    "vitest": "^2.1.9",
+    "vue": "^3.4.0",
+    "vue-tsc": "^2.1.10"
+  },
+  "dependencies": {
+    "async-validator": "^4.2.5",
+    "sortablejs": "^1.15.7"
+  },
+  "peerDependenciesMeta": {
+    "monaco-editor": {
+      "optional": true
+    }
+  }
 }

@@ -28,6 +28,7 @@ import ElProFormDependency from './components/ElProForm/ElProFormDependency.vue'
 import ElProFormCaptcha from './components/ElProForm/ElProFormCaptcha.vue'
 import ElProFieldSet from './components/ElProForm/ElProFieldSet.vue'
 import ElProCardDivider from './components/ElProCard/ElProCardDivider.vue'
+import ElProCodeEditor from './components/ElProCodeEditor/ElProCodeEditor.vue'
 
 export {
   ElProLayout,
@@ -58,8 +59,12 @@ export {
   ElProFormCaptcha,
   ElProFieldSet,
   ElProCardDivider,
+  ElProCodeEditor,
   ElProConfigProvider,
 }
+
+/** Monaco Worker 注册：使用方在自己的入口传 ?worker 导入的工厂（见函数 JSDoc） */
+export { setupMonacoWorkers } from './components/ElProCodeEditor/monacoSetup'
 
 /* --------------------------------- 内核 --------------------------------- */
 
@@ -143,6 +148,7 @@ const components = [
   ElProStatistic,
   ElProStatisticCard,
   ElProStatisticCardGroup,
+  ElProCodeEditor,
   ElProConfigProvider,
 ]
 

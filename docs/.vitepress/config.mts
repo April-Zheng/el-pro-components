@@ -56,6 +56,7 @@ export default defineConfig({
           text: '展示与页面',
           items: [
             { text: 'ElProConfigProvider', link: '/components/provider' },
+            { text: 'ElProCodeEditor', link: '/components/code-editor' },
             { text: 'ElProDescriptions', link: '/components/descriptions' },
             { text: 'ElProLayout', link: '/components/layout' },
             { text: 'ElProPageContainer', link: '/components/page-container' },
