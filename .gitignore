@@ -35,4 +35,5 @@ node_modules/.vite
 # VitePress
 docs/.vitepress/cache/
 docs/.vitepress/dist/
-/.opcteamdist-demo/
+/.opcteam
+dist-demo/
