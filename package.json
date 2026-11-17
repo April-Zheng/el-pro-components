@@ -53,13 +53,14 @@
   },
   "peerDependencies": {
     "element-plus": "^2.8.0",
-    "vue": "^3.3.0",
-    "monaco-editor": ">=0.34.0"
+    "monaco-editor": ">=0.34.0",
+    "vue": "^3.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/sortablejs": "^1.15.9",
     "@vitejs/plugin-vue": "^5.1.0",
+    "@vue/test-utils": "^2.6.0",
     "element-plus": "^2.8.0",
     "happy-dom": "^21.0.4",
     "monaco-editor": "^0.57.0",
@@ -73,6 +74,7 @@
   },
   "dependencies": {
     "async-validator": "^4.2.5",
+    "quill": "^2.0.3",
     "sortablejs": "^1.15.7"
   },
   "peerDependenciesMeta": {

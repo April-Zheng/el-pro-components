@@ -57,6 +57,7 @@ export default defineConfig({
           items: [
             { text: 'ElProConfigProvider', link: '/components/provider' },
             { text: 'ElProCodeEditor', link: '/components/code-editor' },
+            { text: 'ElProRichText', link: '/components/rich-text' },
             { text: 'ElProDescriptions', link: '/components/descriptions' },
             { text: 'ElProLayout', link: '/components/layout' },
             { text: 'ElProPageContainer', link: '/components/page-container' },

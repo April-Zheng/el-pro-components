@@ -32,6 +32,7 @@ import DisplayAdvancedPage from './pages/DisplayAdvancedPage.vue'
 import PlaceholderPage from './pages/PlaceholderPage.vue'
 import ProviderPage from './pages/ProviderPage.vue'
 import CodeEditorPage from './pages/CodeEditorPage.vue'
+import RichTextPage from './pages/RichTextPage.vue'
 
 const active = ref(initialPage())
 </script>
@@ -70,6 +71,7 @@ const active = ref(initialPage())
     <DisplayAdvancedPage v-else-if="active === '/display-advanced'" />
     <ProviderPage v-else-if="active === '/provider'" />
     <CodeEditorPage v-else-if="active === '/code-editor'" />
+    <RichTextPage v-else-if="active === '/rich-text'" />
     <PlaceholderPage v-else :path="active" />
 
     <template #footer>

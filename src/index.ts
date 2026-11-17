@@ -29,6 +29,7 @@ import ElProFormCaptcha from './components/ElProForm/ElProFormCaptcha.vue'
 import ElProFieldSet from './components/ElProForm/ElProFieldSet.vue'
 import ElProCardDivider from './components/ElProCard/ElProCardDivider.vue'
 import ElProCodeEditor from './components/ElProCodeEditor/ElProCodeEditor.vue'
+import ElProRichText from './components/ElProRichText/ElProRichText.vue'
 
 export {
   ElProLayout,
@@ -60,6 +61,7 @@ export {
   ElProFieldSet,
   ElProCardDivider,
   ElProCodeEditor,
+  ElProRichText,
   ElProConfigProvider,
 }
 
@@ -149,6 +151,7 @@ const components = [
   ElProStatisticCard,
   ElProStatisticCardGroup,
   ElProCodeEditor,
+  ElProRichText,
   ElProConfigProvider,
 ]
 
@@ -156,13 +159,19 @@ const components = [
  * 全量安装。也支持按需：
  * `import { ElProTable } from 'el-pro-components'`
  */
+/**
+ * 全量安装。UMD 全局用法也走它：UMD 的命名导出集合顶层没有 install
+ * （插件对象在 .default 下），不提为命名导出的话 `app.use(全局对象)` 会静默注册零组件。
+ */
+export function install(app: App) {
+  for (const comp of components) {
+    const name = (comp as { name?: string }).name
+    if (name) app.component(name, comp)
+  }
+}
+
 export const ElProComponents: Plugin = {
-  install(app: App) {
-    for (const comp of components) {
-      const name = (comp as { name?: string }).name
-      if (name) app.component(name, comp)
-    }
-  },
+  install,
 }
 
 export default ElProComponents

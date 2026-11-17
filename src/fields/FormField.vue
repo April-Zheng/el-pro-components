@@ -36,6 +36,7 @@ import { PRO_CONFIG, EMPTY_PRO_CONFIG } from '../core/configContext'
 import { PRO_FORM_READONLY } from '../core/formContext'
 import CellRenderer from './CellRenderer.vue'
 import ElProCodeEditor from '../components/ElProCodeEditor/ElProCodeEditor.vue'
+import ElProRichText from '../components/ElProRichText/ElProRichText.vue'
 
 /**
  * 自定义 valueType 编辑态的宿主，理由同 CellRenderer 的 VNodeHost：
@@ -241,9 +242,9 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
 </script>
 
 <template>
-  <!-- 只读展示形态：与表格同一套 valueType 渲染 -->
+  <!-- 只读展示形态：与表格同一套 valueType 渲染（richText 自己处理，见下方分支） -->
   <CellRenderer
-    v-if="isReadonlyDisplay"
+    v-if="isReadonlyDisplay && effectiveType !== 'richText'"
     :value="modelValue"
     :column="{ ...column, valueType: displayType }"
   />
@@ -277,6 +278,27 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
     class="el-pro-field--full"
     @update:model-value="(v: string) => emit('update:modelValue', v)"
   />
+
+  <!-- 富文本：Quill。只读展示按 HTML 渲染（内容来自编辑器本身，使用方对 HTML 来源负责） -->
+  <template v-else-if="effectiveType === 'richText'">
+    <div
+      v-if="isReadonlyDisplay"
+      class="el-pro-rich-text__readonly"
+      style="min-height: 60px"
+      v-html="modelValue"
+    />
+    <ElProRichText
+      v-else
+      :model-value="modelValue ?? ''"
+      :height="mergedProps.height ?? 300"
+      :placeholder="mergedProps.placeholder"
+      :disabled="mergedProps.disabled === true"
+      :toolbar="mergedProps.toolbar"
+      :image-upload="mergedProps.imageUpload"
+      class="el-pro-field--full"
+      @update:model-value="(v: string) => emit('update:modelValue', v)"
+    />
+  </template>
 
   <!-- 数值 -->
   <ElInputNumber

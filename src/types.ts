@@ -40,6 +40,8 @@ export type ValueType =
   | 'jsonCode'
   /** 代码编辑器（Monaco）。编辑态是 Monaco 编辑器，只读展示退化为 code 代码块；需安装可选依赖 monaco-editor */
   | 'codeEditor'
+  /** 富文本（Quill，所见即所得）。编辑态是 Quill 编辑器，只读展示按 HTML 渲染；需安装可选依赖 quill */
+  | 'richText'
   /* 数值 */
   | 'number'
   /** 数字区间，值是 `[最小值, 最大值]` */
