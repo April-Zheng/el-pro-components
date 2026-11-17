@@ -5,10 +5,20 @@
  * 只做展示，不碰数据。自定义渲染优先用列插槽（#propName），
  * 需要跨表复用逻辑时再传 column.cellComponent。
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineComponent, inject, onBeforeUnmount, ref, watch } from 'vue'
 import { ElAvatar, ElImage, ElProgress, ElRate, ElTag, ElTooltip } from 'element-plus'
+import { PRO_CONFIG, EMPTY_PRO_CONFIG } from '../core/configContext'
 import { resolveCell } from '../core/valueType'
+import type { VNode } from 'vue'
 import type { ProColumn } from '../types'
+
+/**
+ * 自定义 valueType 的宿主：render 函数返回的 VNode（或纯文本）在这里落地。
+ * 不直接 `<component :is="vnode">`：:is 对 VNode 的支持依赖内部实现，
+ * 函数式组件是文档明确的行为。
+ */
+const VNodeHost = (props: { node: VNode | string | null }) => props.node
+VNodeHost.props = ['node'] as const
 
 const props = defineProps<{
   value: any
@@ -17,6 +27,18 @@ const props = defineProps<{
   index?: number
   emptyText?: string | false
 }>()
+
+/** 全局 valueTypeMap：ProConfigProvider 下发，无 Provider 时为空表 */
+const config = inject(PRO_CONFIG, EMPTY_PRO_CONFIG)
+
+/** 命中自定义 valueType 时的渲染结果；未命中返回 null，走内置词汇 */
+const customNode = computed<VNode | string | null>(() => {
+  const vt = props.column.valueType
+  if (!vt) return null
+  const cfg = config.valueTypeMap[vt]
+  if (!cfg?.render) return null
+  return cfg.render({ value: props.value, column: props.column, row: props.row, index: props.index })
+})
 
 const resolved = computed(() => {
   const vt = props.column.valueType
@@ -81,9 +103,12 @@ watch(
 </script>
 
 <template>
+  <!-- 自定义 valueType（ProConfigProvider 注册）优先于内置词汇 -->
+  <VNodeHost v-if="customNode" :node="customNode" class="el-pro-cell__custom" />
+
   <!-- indexBorder：圆底序号徽章，对齐 React IndexColumn border（序号 > 3 变灰） -->
   <span
-    v-if="column.valueType === 'indexBorder' && resolved.kind === 'text'"
+    v-else-if="column.valueType === 'indexBorder' && resolved.kind === 'text'"
     class="el-pro-index-badge"
     :class="{ 'is-top-three': Number(resolved.text) > 3 }"
   >{{ resolved.text }}</span>

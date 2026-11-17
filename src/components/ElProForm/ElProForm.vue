@@ -9,6 +9,7 @@ import { computed, onMounted, provide, ref, watch } from 'vue'
 import { ElButton, ElCol, ElDivider, ElForm, ElFormItem, ElRow } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { resolveFormColumns } from '../../core/formDependency'
+import { useProConfig } from '../../core/configContext'
 import { PRO_FORM_READONLY } from '../../core/formContext'
 import FormField from '../../fields/FormField.vue'
 import ElProFormDependency from './ElProFormDependency.vue'
@@ -69,6 +70,10 @@ const emit = defineEmits<{
 }>()
 
 const formRef = ref<FormInstance>()
+
+/** 表单尺寸链：prop 显式传 > 全局默认（ProConfigProvider 的 formSize） > EP 默认 */
+const config = useProConfig()
+const formSize = computed(() => props.size ?? config.formSize)
 
 /**
  * 把只读状态放进上下文，让嵌套在 group / formList 里的字段也能拿到 —— 只靠顶层
@@ -190,7 +195,7 @@ defineExpose({
     :label-width="labelWidth"
     :label-position="labelPosition"
     :disabled="disabled"
-    :size="size"
+    :size="formSize"
     class="el-pro-form"
     @submit.prevent="onNativeSubmit"
   >

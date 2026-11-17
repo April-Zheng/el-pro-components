@@ -6,7 +6,7 @@
  * rules ...）一律原样透传，不做重命名；只在 Element Plus 没有对应概念时才新增扩展字段，
  * 且扩展字段统一加 `pro` 无关的前缀（valueType / valueEnum / search ...）。
  */
-import type { Component, CSSProperties, VNode } from 'vue'
+import type { Component, ComputedRef, CSSProperties, VNode } from 'vue'
 
 /* -------------------------------------------------------------------------- */
 /* 响应式（卡片 / 列表的 colSpan、gutter、grid 共用）                            */
@@ -124,6 +124,88 @@ export type ValueEnum = Record<string | number, ValueEnumItem>
 
 /** el-table / 工具栏密度 */
 export type TableSize = 'large' | 'default' | 'small'
+
+/* -------------------------------------------------------------------------- */
+/* 全局配置（ProConfigProvider）                                                */
+/* -------------------------------------------------------------------------- */
+
+/** 自定义 valueType 的注册条目。render 是读态（表格单元格/描述列表），formRender 是编辑态（表单/搜索） */
+export interface ProValueTypeConfig {
+  /** 读态渲染：返回 VNode 或纯文本；返回 null/undefined 时与未命中一样回落内置词汇 */
+  render?: (args: { value: any; column: ProColumn; row?: any; index?: number }) => VNode | string | null
+  /** 编辑态渲染：返回 VNode；值变化通过 update 回调上抛 */
+  formRender?: (args: {
+    modelValue: any
+    update: (value: any) => void
+    column: ProColumn
+    mode: 'form' | 'search'
+  }) => VNode | null
+}
+
+/** 内置文案键。只覆盖库自带的少量文案，不做完整 i18n */
+export interface ProLabels {
+  /** 布局折叠按钮：侧栏展开时的 title */
+  layoutExpand?: string
+  /** 布局折叠按钮：侧栏收起时的 title */
+  layoutCollapse?: string
+}
+
+/** ProConfigProvider 下发的全局配置。 */
+export interface ProConfigContext {
+  /** 自定义 valueType 注册表。键是 valueType 名，命中时优先于内置 valueType 词汇 */
+  valueTypeMap: Record<string, ProValueTypeConfig>
+  /** 内置文案（已与默认值合并，读方无需再兜底） */
+  labels: ProLabels
+  /** 表格 / 工具栏密度默认。列/表 prop 显式传时以 prop 为准 */
+  tableSize?: TableSize
+  /** 表单尺寸默认 */
+  formSize?: TableSize
+}
+
+/** 布局级水印配置。content 之外的字段原样透传给 el-watermark */
+export interface ProWatermarkConfig {
+  /** 水印文案。不传则不渲染水印 */
+  content?: string
+  /** 水印字号、颜色等，透传 el-watermark 的 font（字段与 WatermarkFontType 对齐） */
+  font?: {
+    color?: string
+    fontSize?: number | string
+    fontWeight?: number | 'bold' | 'normal' | 'lighter' | 'bolder'
+    fontFamily?: string
+    fontStyle?: 'none' | 'normal' | 'italic' | 'oblique'
+    fontGap?: number
+    textAlign?: 'start' | 'end' | 'left' | 'right' | 'center'
+    textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom'
+  }
+  /** 水印间距 [水平, 垂直]，透传 el-watermark 的 gap */
+  gap?: [number, number]
+  /** 旋转角度（度） */
+  rotate?: number
+  zIndex?: number
+}
+
+/**
+ * 布局形态：
+ * - `'side'`：侧边菜单（默认，改造前唯一形态）
+ * - `'top'` ：菜单放进顶栏，无侧栏
+ * - `'mix'` ：一级菜单在顶栏 + 二级菜单在侧栏
+ */
+export type ProLayoutMode = 'side' | 'top' | 'mix'
+
+/** pageTitleRender 的入参。title 是推导出的页面标题（显式 pageTitle > 菜单叶子 > 布局 title） */
+export interface PageTitleInfo {
+  title: string
+  /** 当前路径的菜单链路（与面包屑同源） */
+  breadcrumb: ProLayoutMenuItem[]
+}
+
+/**
+ * 页面标题渲染：
+ * - 不传（undefined）：默认 `页面标题 - 布局 title`，同步 document.title
+ * - `false`：不同步 document.title（SPA 嵌在宿主里由宿主管标题）
+ * - 函数：返回字符串则用它同步 document.title，返回 false/undefined 则本轮不动
+ */
+export type PageTitleRender = false | ((info: PageTitleInfo) => string | false | void)
 
 /* -------------------------------------------------------------------------- */
 /* 布局                                                                        */

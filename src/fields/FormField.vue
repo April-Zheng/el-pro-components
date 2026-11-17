@@ -8,7 +8,7 @@
  * 直接吐给 request，后端就收到 `2026-11-02T08:00:00.000Z` 这种值。
  * 传 `column.valueFormat` 或 `fieldProps['value-format']` 可覆盖。
  */
-import { computed, inject } from 'vue'
+import { computed, defineComponent, inject } from 'vue'
 import {
   ElCascader,
   ElCheckbox,
@@ -29,10 +29,19 @@ import {
   ElTimePicker,
   ElTreeSelect,
 } from 'element-plus'
+import type { VNode } from 'vue'
 import type { ProColumn } from '../types'
 import { enumToOptions } from '../core/valueType'
+import { PRO_CONFIG, EMPTY_PRO_CONFIG } from '../core/configContext'
 import { PRO_FORM_READONLY } from '../core/formContext'
 import CellRenderer from './CellRenderer.vue'
+
+/**
+ * 自定义 valueType 编辑态的宿主，理由同 CellRenderer 的 VNodeHost：
+ * :is 对 VNode 的支持依赖内部实现，函数式组件是文档明确的行为。
+ */
+const VNodeHost = (props: { node: VNode | null }) => props.node
+VNodeHost.props = ['node'] as const
 
 const props = defineProps<{
   modelValue: any
@@ -46,6 +55,9 @@ const emit = defineEmits<{ 'update:modelValue': [any] }>()
 
 /** 表单级只读上下文：ElProForm 注入，供 group / formList 里的深层字段继承 */
 const formReadonlyCtx = inject(PRO_FORM_READONLY, null)
+
+/** 全局 valueTypeMap：ProConfigProvider 下发，无 Provider 时为空表 */
+const config = inject(PRO_CONFIG, EMPTY_PRO_CONFIG)
 
 const value = computed({
   get: () => props.modelValue,
@@ -81,6 +93,20 @@ const isReadonlyDisplay = computed(
 )
 
 const options = computed(() => enumToOptions(props.column.valueEnum, true))
+
+/** 命中自定义 valueType 时的编辑态渲染结果；未命中返回 null，走内置控件 */
+const customNode = computed<VNode | null>(() => {
+  const vt = props.column.valueType
+  if (!vt) return null
+  const cfg = config.valueTypeMap[vt]
+  if (!cfg?.formRender) return null
+  return cfg.formRender({
+    modelValue: props.modelValue,
+    update: (v: any) => emit('update:modelValue', v),
+    column: props.column,
+    mode: props.mode ?? 'form',
+  })
+})
 
 const SELECT_LIKE = [
   'select',
@@ -226,6 +252,13 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
     :column="column"
     :mode="mode"
     v-bind="mergedProps"
+  />
+
+  <!-- 自定义 valueType 的编辑态（ProConfigProvider 注册）：列级 fieldComponent 之后、内置控件之前 -->
+  <VNodeHost
+    v-else-if="customNode"
+    :node="customNode"
+    class="el-pro-field__custom"
   />
 
   <!-- 数值 -->

@@ -29,6 +29,7 @@ export const menus: ProLayoutMenuItem[] = [
   { title: '表格交互增强', path: '/table-interactive' },
   { title: '表单能力补齐', path: '/form-advanced' },
   { title: '展示类补齐', path: '/display-advanced' },
+  { title: '全局配置', path: '/provider' },
   {
     title: '分组菜单',
     children: [

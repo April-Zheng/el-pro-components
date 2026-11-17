@@ -1,4 +1,5 @@
 import type { App, Plugin } from 'vue'
+import ElProConfigProvider from './components/ElProConfigProvider/ElProConfigProvider.vue'
 import ElProLayout from './components/ElProLayout/ElProLayout.vue'
 import ElProDescriptions from './components/ElProDescriptions/ElProDescriptions.vue'
 import ElProForm from './components/ElProForm/ElProForm.vue'
@@ -57,12 +58,31 @@ export {
   ElProFormCaptcha,
   ElProFieldSet,
   ElProCardDivider,
+  ElProConfigProvider,
 }
 
 /* --------------------------------- 内核 --------------------------------- */
 
 export { useTable, pickSearchColumns } from './core/useTable'
 export type { ProTableAction, UseTableOptions } from './core/useTable'
+
+/**
+ * 全局配置层：ProConfigProvider 的注入与合并逻辑。
+ * `useProConfig` / `useProLabel` 给组件读全局默认，`routeToMenu` 给菜单数据管道。
+ */
+export {
+  DEFAULT_PRO_LABELS,
+  EMPTY_PRO_CONFIG,
+  PRO_CONFIG,
+  mergeProConfig,
+  provideProConfig,
+  useProConfig,
+  useProLabel,
+} from './core/configContext'
+
+/** 菜单数据管道：路由记录 → ProLayoutMenuItem */
+export { routeToMenu } from './core/menu'
+export type { ProRouteLike, RouteToMenuOptions } from './core/menu'
 
 /** 表单实例。弹窗 / 抽屉表单的 `formRef` 就是这个类型 */
 export type { ProFormInstance } from './components/ElProForm/useFormContainer'
@@ -119,6 +139,7 @@ const components = [
   ElProStatistic,
   ElProStatisticCard,
   ElProStatisticCardGroup,
+  ElProConfigProvider,
 ]
 
 /**

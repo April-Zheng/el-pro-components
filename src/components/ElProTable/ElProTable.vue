@@ -26,6 +26,7 @@ import {
 } from '../../core/column'
 import type { ColumnFixedState } from '../../core/column'
 import { PRO_TABLE_CELL } from '../../core/tableCellContext'
+import { useProConfig } from '../../core/configContext'
 import { DISPLAY_ONLY_VALUE_TYPES } from '../../core/valueType'
 import type { ProColumn, ProEditableConfig, ProRequest, TableSize } from '../../types'
 import SearchForm from './SearchForm.vue'
@@ -108,7 +109,10 @@ const props = withDefaults(
     defaultCollapsed: true,
     defaultPageSize: 20,
     immediate: true,
-    size: 'default',
+    /*
+     * size 不给 default：未传时回落到 ProConfigProvider 的 tableSize 全局默认，
+     * 两层都没配再落到 'default'。类型是纯字符串联合，无 Boolean casting 问题。
+     */
     /*
      * 下面几项必须给显式 default。
      * 它们的类型是「对象 | false」或「数组」，Vue 会推断出运行时类型含 Boolean，
@@ -287,7 +291,13 @@ watch(
   { deep: true },
 )
 
-const tableSize = ref<TableSize>(props.size)
+const config = useProConfig()
+/**
+ * 尺寸链：prop 显式传 > 全局默认（ProConfigProvider） > 'default'。
+ * 全局默认在挂载时读一次：密度是用户在工具栏里切的状态（ref），
+ * 若跟随 Provider 运行时变更会覆盖用户的手动选择。
+ */
+const tableSize = ref<TableSize>(props.size ?? config.tableSize ?? 'default')
 const fullscreen = ref(false)
 
 /** 跨页保留选中：默认开（前提 rowKey 稳定）；selection.reserveSelection === false 显式关闭 */
