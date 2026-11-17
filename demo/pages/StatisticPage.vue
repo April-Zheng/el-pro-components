@@ -1,12 +1,16 @@
 <script setup lang="ts">
 /** 指标卡示例：Group 等分 / 图表位 / 三种排布 / 加载态 */
 import { ElButton, ElProgress } from 'element-plus'
+import { ref } from 'vue'
 import {
   ElProCard,
   ElProStatistic,
   ElProStatisticCard,
   ElProStatisticCardGroup,
 } from '@/index'
+
+/** countUp 演示：点按钮改值，看从当前值重新滚动 */
+const orderValue = ref(3642)
 
 const overview = [
   {
@@ -125,4 +129,25 @@ const overview = [
       </template>
     </ElProStatisticCard>
   </ElProCard>
+
+  <div class="demo-card" style="margin-top: 16px">
+    <h3 class="demo-section-title">数字滚动（countUp）</h3>
+    <p class="demo-section-desc">
+      第一张：count-up 默认配置（easeOut、1.2s、从 0 滚到 value）；第二张：自定义起始值与时长，
+      数值变化时从当前值重新滚动；第三张：线性缓动 + precision 小数位全程生效。
+      系统开启「减弱动态」时自动跳过动画直接落终值。
+    </p>
+    <ElProStatisticCardGroup :gutter="16">
+      <ElProStatisticCard :statistic="{ title: '访问量', value: 864213, countUp: true, trend: 'up' }" />
+      <ElProStatisticCard
+        :statistic="{ title: '新增订单', value: orderValue, countUp: { from: 5000, duration: 800 }, prefix: '¥' }"
+      />
+      <ElProStatisticCard
+        :statistic="{ title: '转化率', value: 0.968, precision: 2, suffix: '%', countUp: { duration: 1500, easing: 'linear' } }"
+      />
+    </ElProStatisticCardGroup>
+    <div style="margin-top: 12px">
+      <ElButton size="small" @click="orderValue = orderValue === 3642 ? 9876 : 3642">改变数值，看重新滚动</ElButton>
+    </div>
+  </div>
 </template>

@@ -54,6 +54,7 @@
 | formatter | 完全自定义格式化，给了它就忽略 precision 与分组 | `(value) => string` | — |
 | loading | 加载占位条 | `boolean` | `false` |
 | groupSeparator | 千分位分组符 | `string` | `','` |
+| countUp | 数字滚动：`true` 用默认配置（easeOut、1.2s、从 0 滚到 value）；对象可定制 `{ duration?, from?, easing?, immediate? }`。滚动中间帧走同一套 precision/千分位/formatter；字符串值不滚动；系统开启「减弱动态」时跳过动画直接落终值 | `boolean \| ProCountUpOptions` | — |
 
 ### 卡片侧（ElProStatisticCard）
 

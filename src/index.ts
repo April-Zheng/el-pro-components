@@ -93,6 +93,10 @@ export type { ColumnFixed, ColumnFixedState } from './core/column'
 export { BREAKPOINTS, BREAKPOINT_ORDER, normalizeGutter, resolveResponsive, useBreakpoint } from './core/responsive'
 export type { NormalizedGutter } from './core/responsive'
 
+/** 数字滚动内核：easeOutCubic 等缓动 + playCountUp 帧滚动（调度器可注入） */
+export { easeLinear, easeOutCubic, playCountUp, prefersReducedMotion } from './core/countUp'
+export type { CountUpEasing, FrameScheduler, PlayCountUpOptions, PlayingCountUp } from './core/countUp'
+
 export { pickDeps, resolveColumnByDependency, resolveFormColumns } from './core/formDependency'
 
 export { calcActionsOffset, computeQueryFilterLayout, resolveShowLength } from './core/queryFilter'

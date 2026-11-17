@@ -311,6 +311,23 @@ export interface ProStatisticProps {
   loading?: boolean
   /** 只作用于数值本身的样式（颜色、字号） */
   valueStyle?: CSSProperties
+  /**
+   * 数字滚动：true 用默认配置（easeOut、1.2s、从 0 滚到 value）。
+   * 字符串值不滚动，原样显示；系统开启「减弱动态」时跳过动画直接落终值
+   */
+  countUp?: boolean | ProCountUpOptions
+}
+
+/** 数字滚动配置。挂 ElProStatistic 的 countUp 用 */
+export interface ProCountUpOptions {
+  /** 动画时长 ms @default 1200 */
+  duration?: number
+  /** 起始值 @default 0 */
+  from?: number
+  /** 缓动：'easeOut'（easeOutCubic）| 'linear' @default 'easeOut' */
+  easing?: 'linear' | 'easeOut'
+  /** 挂载后立即播放 @default true；false 时仅 value 变化时播放 */
+  immediate?: boolean
 }
 
 /* -------------------------------------------------------------------------- */

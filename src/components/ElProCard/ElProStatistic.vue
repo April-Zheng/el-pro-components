@@ -16,9 +16,15 @@
  * 趋势配色是**红涨绿跌**（中国金融语义，源码注释里也是这么写的）。
  * 想反过来，覆盖 `--el-pro-statistic-trend-up-color` / `-down-color` 即可。
  */
-import { computed, type CSSProperties } from 'vue'
+import { computed, onBeforeUnmount, ref, watch, type CSSProperties } from 'vue'
 import { ElTooltip } from 'element-plus'
-import type { ProStatisticLayout, ProStatisticStatus, ProStatisticTrend } from '../../types'
+import { playCountUp, prefersReducedMotion, type PlayingCountUp } from '../../core/countUp'
+import type {
+  ProCountUpOptions,
+  ProStatisticLayout,
+  ProStatisticStatus,
+  ProStatisticTrend,
+} from '../../types'
 
 defineOptions({ name: 'ElProStatistic' })
 
@@ -46,6 +52,8 @@ const props = withDefaults(
     loading?: boolean
     /** 只作用于数值本身的内联样式（不含标题/描述），对齐 antd Statistic 的 valueStyle */
     valueStyle?: CSSProperties
+    /** 数字滚动：true 用默认配置；对象可定制。字符串值不滚动 */
+    countUp?: boolean | ProCountUpOptions
   }>(),
   {
     layout: 'vertical',
@@ -62,7 +70,7 @@ const props = withDefaults(
  * 想要「英文分组 + 中文小数点」这种组合就做不到，而财务场景确实会这么要求。
  */
 const displayValue = computed<string>(() => {
-  const raw = props.value
+  const raw = shownValue.value
   if (props.formatter) return String(props.formatter(raw as number | string))
   if (raw === undefined || raw === null || raw === '') return '-'
   // 字符串原样输出：后端已经格式化过的（如 '12,345.67'）不该被二次加工
@@ -87,6 +95,88 @@ const displayValue = computed<string>(() => {
 })
 
 const hasTitle = computed(() => props.title !== undefined || !!props.tip)
+
+/* --------------------------- 数字滚动（countUp） --------------------------- */
+
+/** countUp 展开后的配置。未开启时为 null */
+const countUpOptions = computed<ProCountUpOptions | null>(() => {
+  if (!props.countUp) return null
+  return typeof props.countUp === 'object' ? props.countUp : {}
+})
+
+/** 滚动中的当前值。null 表示「不在滚动」，显示值直接取 props.value */
+const animatedValue = ref<number | null>(null)
+/** 最近一次显示的数值（含终帧）。动画清空后，从这里取「当前值」作为下一次滚动的起点 */
+let lastShown: number | null = null
+let playing: PlayingCountUp | null = null
+
+/**
+ * 从当前显示值滚到 target。
+ * 非数字值（后端已格式化的字符串）没有可插值的数轴，直接落终值。
+ */
+function rollTo(target: number) {
+  playing?.cancel()
+  const opts = countUpOptions.value
+  if (!opts || prefersReducedMotion()) {
+    animatedValue.value = null
+    lastShown = target
+    return
+  }
+  const from = animatedValue.value ?? lastShown ?? opts.from ?? 0
+  playing = playCountUp({
+    from,
+    to: target,
+    duration: opts.duration ?? 1200,
+    easing: opts.easing ?? 'easeOut',
+    onFrame: (v) => {
+      lastShown = v
+      if (v === target) {
+        // 终帧：动画完成，清掉动画值回落到 props.value 原样显示（保留原小数位，不被中帧取整规则碰）
+        animatedValue.value = null
+        playing = null
+        return
+      }
+      animatedValue.value = v
+    },
+  })
+}
+
+/**
+ * 动画期间的显示值。中帧走同一套 displayValue 格式化（千分位/分组符/formatter 全生效）；
+ * 小数位取整（有 precision 时按 precision 位）——进度小数（如 10,801.875）不该露给用户；
+ * 动画完成后 animatedValue 已被清空，这里不会参与，终值按 props.value 原精度显示。
+ */
+const shownValue = computed<number | string>(() => {
+  if (animatedValue.value === null) return props.value ?? '-'
+  const v = animatedValue.value
+  return props.precision != null ? Number(v.toFixed(props.precision)) : Math.round(v)
+})
+
+if (countUpOptions.value?.immediate !== false && typeof props.value === 'number') {
+  rollTo(props.value)
+}
+
+watch(
+  () => props.value,
+  (val, old) => {
+    if (!countUpOptions.value) return
+    if (typeof val !== 'number') {
+      animatedValue.value = null
+      playing?.cancel()
+      return
+    }
+    // 首值后到（old 为 undefined 且没滚过）：immediate=false 时不播，只等下次变化
+    if (
+      old === undefined &&
+      animatedValue.value === null &&
+      countUpOptions.value.immediate === false
+    )
+      return
+    rollTo(val)
+  },
+)
+
+onBeforeUnmount(() => playing?.cancel())
 
 const rootClass = computed(() => [
   `is-layout-${props.layout}`,
