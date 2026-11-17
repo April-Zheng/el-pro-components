@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
       plugins: [vue()],
       resolve: { alias },
       server: { port: 5273, host: '127.0.0.1' },
+      /*
+       * demo 构建输出隔离到 dist-demo：默认会共用库模式的 dist/，
+       * 先 build 后 build:demo 会把库产物清掉，发包前一跑 demo 就坏。
+       */
+      build: { outDir: 'dist-demo' },
     }
   }
 
