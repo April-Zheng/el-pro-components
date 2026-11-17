@@ -12,8 +12,19 @@
  *   工具栏加 video 项并自己接管 handler（Quill 的 modules.toolbar.handlers）。
  */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import Quill from 'quill'
 import 'quill/dist/quill.snow.css'
+import type Quill from 'quill'
+
+/**
+ * 动态加载 Quill。为什么要动态：quill/core/emitter.js 在模块加载时就访问 document，
+ * 静态 import 会让任何 SSR 环境（VitePress/Nuxt）在构建期直接崩；动态后 SSR
+ * 只渲染占位骨架，客户端再创建编辑器。quill 是非可选依赖，使用方无需额外配置。
+ */
+let quillPromise: Promise<typeof import('quill')['default']> | null = null
+function loadQuill(): Promise<typeof import('quill')['default']> {
+  quillPromise ??= import('quill').then((m) => m.default)
+  return quillPromise
+}
 
 defineOptions({ name: 'ElProRichText' })
 
@@ -140,9 +151,15 @@ function onPasteOrDrop(e: ClipboardEvent | DragEvent) {
  * 初始化 Quill。quill 已建或已报错时不重复；容器可用性由 watch(editorRef) 兜底。
  * 初始化失败显式暴露（console.error + 页内提示），不静默吞——静默失败比报错更难查。
  */
-function initQuill(el: HTMLElement | null) {
-  if (!el || quill || initError.value) return
+let initStarted = false
+async function initQuill(el: HTMLElement | null) {
+  // 同步置位：await 加载期间第二次调用（onMounted 与 watch 都会触发）不能重入建双实例
+  if (!el || initStarted || initError.value) return
+  initStarted = true
   try {
+    const Quill = await loadQuill()
+    // 异步加载期间组件可能已卸载/容器已移除
+    if (!el.isConnected) return
     quill = new Quill(el, {
       theme: 'snow',
       placeholder: props.placeholder,
@@ -192,7 +209,6 @@ function initQuill(el: HTMLElement | null) {
     console.error('[ElProRichText] Quill 初始化失败：', error)
   }
 }
-
 onMounted(() => initQuill(editorRef.value))
 
 // 容器可用性兜底：onMounted 时模板 ref 尚未绑定（异步/时序场景）时，绑定后补初始化。

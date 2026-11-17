@@ -81,7 +81,17 @@ afterEach(() => {
 })
 
 function mountEditor(props: Record<string, any> = {}) {
-  return mount(ElProRichText, { props })
+  return mount(ElProRichText, { props, attachTo: document.body })
+}
+
+/** 等动态 import('quill') 完成（mock 下是微任务，flush 即可） */
+async function flushQuill(tries = 30) {
+  for (let i = 0; i < tries; i++) {
+    if (quillInstances.length > 0) return true
+    await Promise.resolve()
+    await nextTick()
+  }
+  return false
 }
 
 /** 拦 document.createElement('input')：捕获文件选择器并自动喂入文件触发 onchange */
@@ -101,8 +111,9 @@ function interceptFileInput(file: File) {
 }
 
 describe('ElProRichText（Quill 2 封装）', () => {
-  it('挂载创建 Quill 实例：snow 主题、默认工具栏、placeholder', () => {
+  it('挂载创建 Quill 实例：snow 主题、默认工具栏、placeholder', async () => {
     mountEditor({ placeholder: '写点什么' })
+    expect(await flushQuill()).toBe(true)
     expect(quillInstances).toHaveLength(1)
     const opts = quillInstances[0].__options
     expect(opts.theme).toBe('snow')
@@ -115,7 +126,9 @@ describe('ElProRichText（Quill 2 封装）', () => {
     const emitted: string[] = []
     const wrapper = mount(ElProRichText, {
       props: { modelValue: '', 'onUpdate:modelValue': (v: string) => emitted.push(v) },
+      attachTo: document.body,
     })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     q.root.innerHTML = '<p>你好</p>'
     q.emit('text-change')
@@ -132,18 +145,21 @@ describe('ElProRichText（Quill 2 封装）', () => {
     expect(q.clipboard.dangerouslyPasteHTML).not.toHaveBeenCalled()
   })
 
-  it('初始内容：挂载时写入编辑器（走 clipboard 归一化）', () => {
+  it('初始内容：挂载时写入编辑器（走 clipboard 归一化）', async () => {
     mountEditor({ modelValue: '<p>初始内容</p>' })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     expect(q.clipboard.dangerouslyPasteHTML).toHaveBeenCalledWith('<p>初始内容</p>')
     // 空值不写（placeholder 由 Quill 自己出）
     ;(q.clipboard.dangerouslyPasteHTML as any).mockClear()
     mountEditor({ modelValue: '' })
+    await vi.waitFor(() => expect(quillInstances.length).toBe(2))
     expect(quillInstances[1].clipboard.dangerouslyPasteHTML).not.toHaveBeenCalled()
   })
 
   it('disabled 切换 → quill.enable', async () => {
     const wrapper = mountEditor({ disabled: false })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     await wrapper.setProps({ disabled: true })
     await nextTick()
@@ -155,6 +171,7 @@ describe('ElProRichText（Quill 2 封装）', () => {
 
   it('工具栏图片按钮：无 imageUpload 时回落 base64 插入', async () => {
     mountEditor()
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     const handler = q.__options.modules.toolbar.handlers.image as () => void
 
@@ -182,6 +199,7 @@ describe('ElProRichText（Quill 2 封装）', () => {
     let resolveUpload: (url: string) => void = () => {}
     const upload = vi.fn(() => new Promise<string>((r) => (resolveUpload = r)))
     const wrapper = mountEditor({ imageUpload: upload })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
 
     interceptFileInput(new File(['x'], 'a.png', { type: 'image/png' }))
@@ -198,6 +216,7 @@ describe('ElProRichText（Quill 2 封装）', () => {
   it('粘贴/拖拽图片走上传管道，非图片内容放行原生粘贴', async () => {
     const upload = vi.fn(async () => 'https://cdn.example.com/p.png')
     mountEditor({ imageUpload: upload })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     const root = q.root as any
     const pasteListener = root.addEventListener.mock.calls.find(
@@ -226,6 +245,7 @@ describe('ElProRichText（Quill 2 封装）', () => {
   it('disabled：粘贴/拖拽图片被拦截，不上传不改内容', async () => {
     const upload = vi.fn(async () => 'https://cdn.example.com/d.png')
     const wrapper = mountEditor({ disabled: true })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     const root = q.root as any
     const pasteListener = root.addEventListener.mock.calls.find(
@@ -249,6 +269,7 @@ describe('ElProRichText（Quill 2 封装）', () => {
   it('多图粘贴：全部图片顺序上传（不只第一张）', async () => {
     const upload = vi.fn(async () => 'https://cdn.example.com/x.png')
     mountEditor({ imageUpload: upload })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     const root = q.root as any
     const pasteListener = root.addEventListener.mock.calls.find(
@@ -272,7 +293,9 @@ describe('ElProRichText（Quill 2 封装）', () => {
     const onUploadError = vi.fn()
     const wrapper = mount(ElProRichText, {
       props: { modelValue: '', imageUpload: upload, onUploadError },
+      attachTo: document.body,
     })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     interceptFileInput(new File(['x'], 'a.png', { type: 'image/png' }))
     ;(q.__options.modules.toolbar.handlers.image as () => void)()
@@ -286,7 +309,8 @@ describe('ElProRichText（Quill 2 封装）', () => {
 
   it('focus/blur：只在焦点翻转时发，不随 selection-change 重复', async () => {
     const on = { focus: vi.fn(), blur: vi.fn() }
-    mount(ElProRichText, { props: { modelValue: '', onFocus: on.focus, onBlur: on.blur } })
+    mount(ElProRichText, { props: { modelValue: '', onFocus: on.focus, onBlur: on.blur }, attachTo: document.body })
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     q.emitEditorChange('selection-change') // 未聚焦
     q.__focused = true
@@ -299,8 +323,9 @@ describe('ElProRichText（Quill 2 封装）', () => {
     expect(on.blur).toHaveBeenCalledTimes(1)
   })
 
-  it('insertText 实例方法：在光标处插入文本并移动选区', () => {
+  it('insertText 实例方法：在光标处插入文本并移动选区', async () => {
     const wrapper = mountEditor()
+    expect(await flushQuill()).toBe(true)
     const q = quillInstances[0]
     ;(wrapper.vm as any).insertText('标记')
     expect(q.__inserts[0]).toMatchObject({ type: 'text', value: '标记' })
