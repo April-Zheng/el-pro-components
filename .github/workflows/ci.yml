@@ -1,0 +1,82 @@
+# 质量闸门：类型检查、单测、构建、产物冒烟、demo 构建
+# 为什么独立于 deploy-docs：文档部署只关心 vitepress 能不能构建，
+# 它绿了不代表库本身可用（曾出现「docs 部署成功但产物 install 丢失」）。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 同一分支的新推送取消旧运行，省 runner 时间
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 快速闸门：每次 push/PR 都跑，几十秒级，挡住绝大多数回归
+  checks:
+    name: typecheck / test / build / smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build library
+        run: npm run build
+
+      # 产物级验证：单测在 mock 与 happy-dom 里跑，测不到「构建产物装进真实页面」的问题。
+      # 这一步覆盖过两次真实事故：SSR 下 import 崩、UMD 全局 install 丢失。
+      - name: Smoke test dist artifacts
+        run: npm run smoke
+
+      - name: Build demo
+        run: npm run build:demo
+
+      - name: Build docs
+        run: npm run docs:build
+
+  # 真实浏览器 E2E：慢（要装浏览器），只在 main 与手动触发时跑，失败留 artifact
+  e2e:
+    name: E2E (真实浏览器)
+    runs-on: ubuntu-latest
+    needs: checks
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7

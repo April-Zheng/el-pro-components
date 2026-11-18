@@ -38,3 +38,9 @@ docs/.vitepress/dist/
 /.opcteam
 dist-demo/
 public/richtext-probe.html
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright/

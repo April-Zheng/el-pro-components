@@ -187,8 +187,18 @@ async function initQuill(el: HTMLElement | null) {
       placeholder: props.placeholder,
       readOnly: props.disabled,
       modules: {
-        // 双保险：禁用 Quill 自带的 drop 上传模块，drop 完全由我们的捕获拦截接管
-        uploader: false,
+        /*
+         * 让 Quill 自带的 drop 上传变成空操作。
+         *
+         * 踩过的坑：`uploader: false` **禁不掉** —— 构造器里 theme.addModule('uploader')
+         * 会无视 modules 配置强行加载它；`mimetypes: []` 也禁不掉 —— Quill 的配置走
+         * 深度合并，数组按索引合并，空数组没有元素可覆盖，默认值原封不动。
+         * 可行且语义清楚的做法是把 handler 换成空函数：upload() 里 mimetypes 匹配后
+         * 调的就是它，于是不插入任何内容。
+         *
+         * 第一道防线仍是下方 onPasteOrDrop 的捕获阶段拦截；这里是第二道。
+         */
+        uploader: { handler: () => {} },
         toolbar: {
           container: props.toolbar ?? DEFAULT_TOOLBAR,
           handlers: { image: onToolbarImage },
