@@ -8,4 +8,4 @@
 
 真正非默认的只有一个：`access: public`。包本来就公开发布在 npm 上，默认值 `restricted` 会让首次发布报 402。
 
-`commit: false` 值得记住后果：changeset 文件里不会记 commit hash，所以 `CHANGELOG.md` 的条目是纯摘要、不带 hash。
+`commit: false` 的含义是**工具不会自己提交**，不影响 CHANGELOG 里的 hash：升版本时 `@changesets/apply-release-plan` 会反查「添加该 changeset 文件的那次提交」，把 7 位 hash 写进条目。所以 changeset 文件必须和代码一起提交、且早于升版本——没提交过的那条，CHANGELOG 里就只剩摘要、没有 hash。

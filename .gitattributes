@@ -1,0 +1,3 @@
+# 仓库没有 autocrlf 约束，Windows 上 core.autocrlf=true 会把 .sh 检成 CRLF，
+# bash 执行时报 `$'\r': command not found`。只锁 shell 脚本，不动其它文件。
+*.sh text eol=lf
