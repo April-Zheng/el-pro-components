@@ -30,6 +30,7 @@ export default defineConfig({
             { text: '快速开始', link: '/guide/getting-started' },
             { text: 'valueType 词汇表', link: '/guide/value-type' },
             { text: '一条完整链路：订单页', link: '/guide/order-page' },
+            { text: '发版', link: '/guide/releasing' },
           ],
         },
       ],

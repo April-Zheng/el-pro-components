@@ -1011,6 +1011,8 @@ npm run typecheck   # 类型检查
 
 playground 支持 `?page=/order`、`/users`、`/page-container`、`/grouped`、`/form`、`/form-container`、`/form-list`、`/query-filter`、`/detail`、`/card`、`/statistic`、`/list`、`/editable` 直接打开对应页面。
 
+改完会进入包的改动记得 `npm run changeset` 记一条——漏记不会报错，那条改动会直接缺席 CHANGELOG；发版全流程见 [发版](./docs/guide/releasing.md)。
+
 demo 本身也按「壳 / 页 / 数据」拆开了，加一个示例只动 `pages/` 一个文件：
 
 ```
