@@ -1000,6 +1000,8 @@ API 是**按 Element Plus 习惯**设计的，所以不能直接复制粘贴 ant
 
 ## 开发
 
+需要 Node ≥ 20（`engines` 已声明下限，因为 happy-dom 与 Playwright 自身要求 ≥ 20）；用 nvm 时 `nvm use` 直接读 `.nvmrc` 切到开发用的版本。低版本下 `vitest` 会因不支持 `??=` 之类的语法直接崩，报错信息与真正原因无关。
+
 ```bash
 npm install
 npm run dev         # playground，默认 http://127.0.0.1:5273
