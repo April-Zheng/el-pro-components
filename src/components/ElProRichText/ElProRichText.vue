@@ -133,9 +133,30 @@ function onToolbarImage() {
   }
 }
 
-/** 粘贴/拖拽进图片：拦截原生行为，走同一条上传管道。禁用态直接放行原生行为 */
-function onPasteOrDrop(e: ClipboardEvent | DragEvent) {
-  if (props.disabled || uploading.value) return
+/** 绑定后的根元素（编辑器的父级）：拦截监听挂在这里走捕获阶段——
+ * 捕获先于目标阶段执行，preventDefault + stopPropagation 能整体拦掉
+ * Quill 自带的 drop（uploader 模块）/paste 处理，避免同一次拖拽出两张图 */
+const rootRef = ref<HTMLDivElement | null>(null)
+
+/** 事件目标是否在编辑器内（挂到父级后需要区分来源） */
+function isEditorEvent(e: Event): boolean {
+  const editorRoot = quill?.root
+  if (!editorRoot || typeof editorRoot.contains !== 'function') return true
+  return editorRoot.contains(e.target as Node)
+}
+
+/** 拖拽悬停必须 preventDefault 才允许 drop（浏览器默认拒绝） */
+function onDragOver(e: Event) {
+  if (!isEditorEvent(e)) return
+  e.preventDefault()
+}
+
+/**
+ * 粘贴/拖拽进图片：拦截原生行为，走同一条上传管道。
+ * 禁用态：仍然拦（阻止拖拽图片触发浏览器「打开文件」导航），但不改内容。
+ */
+function onPasteOrDrop(e: Event) {
+  if (!isEditorEvent(e)) return
   const files =
     e.type === 'paste'
       ? (e as ClipboardEvent).clipboardData?.files
@@ -144,6 +165,7 @@ function onPasteOrDrop(e: ClipboardEvent | DragEvent) {
   if (!images.length) return
   e.preventDefault()
   e.stopPropagation()
+  if (props.disabled || uploading.value) return
   images.forEach((file) => void uploadAndInsert(file))
 }
 
@@ -165,6 +187,8 @@ async function initQuill(el: HTMLElement | null) {
       placeholder: props.placeholder,
       readOnly: props.disabled,
       modules: {
+        // 双保险：禁用 Quill 自带的 drop 上传模块，drop 完全由我们的捕获拦截接管
+        uploader: false,
         toolbar: {
           container: props.toolbar ?? DEFAULT_TOOLBAR,
           handlers: { image: onToolbarImage },
@@ -200,9 +224,14 @@ async function initQuill(el: HTMLElement | null) {
       }
     })
 
-    // 粘贴 / 拖拽拦截挂到编辑区
-    quill.root.addEventListener('paste', onPasteOrDrop as EventListener)
-    quill.root.addEventListener('drop', onPasteOrDrop as EventListener)
+    // 粘贴 / 拖拽拦截挂到组件根元素走捕获阶段（捕获先于 Quill 在 quill.root 上
+    // 注册的目标阶段监听器，preventDefault + stopPropagation 能整体拦掉它的处理）
+    const rootEl = rootRef.value
+    if (rootEl) {
+      rootEl.addEventListener('paste', onPasteOrDrop, true)
+      rootEl.addEventListener('drop', onPasteOrDrop, true)
+      rootEl.addEventListener('dragover', onDragOver, true)
+    }
   } catch (error) {
     initError.value = true
     quill = null
@@ -222,9 +251,13 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  const rootEl = rootRef.value
+  if (rootEl) {
+    rootEl.removeEventListener('paste', onPasteOrDrop, true)
+    rootEl.removeEventListener('drop', onPasteOrDrop, true)
+    rootEl.removeEventListener('dragover', onDragOver, true)
+  }
   if (quill) {
-    quill.root.removeEventListener('paste', onPasteOrDrop as EventListener)
-    quill.root.removeEventListener('drop', onPasteOrDrop as EventListener)
     // Quill 没有显式 dispose；置空让容器 GC
     quill = null
   }
@@ -263,7 +296,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="el-pro-rich-text" :class="{ 'is-disabled': disabled, 'is-uploading': uploading }">
+  <div ref="rootRef" class="el-pro-rich-text" :class="{ 'is-disabled': disabled, 'is-uploading': uploading }">
     <div ref="editorRef" class="el-pro-rich-text__editor" />
     <div v-if="uploading" class="el-pro-rich-text__uploading" aria-live="polite">
       <span class="el-pro-rich-text__spinner" aria-hidden="true" />

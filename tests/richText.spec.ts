@@ -215,76 +215,68 @@ describe('ElProRichText（Quill 2 封装）', () => {
 
   it('粘贴/拖拽图片走上传管道，非图片内容放行原生粘贴', async () => {
     const upload = vi.fn(async () => 'https://cdn.example.com/p.png')
-    mountEditor({ imageUpload: upload })
+    const wrapper = mountEditor({ imageUpload: upload })
     expect(await flushQuill()).toBe(true)
-    const q = quillInstances[0]
-    const root = q.root as any
-    const pasteListener = root.addEventListener.mock.calls.find(
-      ([name]: any) => name === 'paste',
-    )![1]
+    const upload2 = upload
+    void upload2
+    const target = wrapper.find('.el-pro-rich-text__editor').element
+    expect(target).toBeTruthy()
 
-    // 图片粘贴：拦截并上传
+    // 图片粘贴：拦截并上传（捕获监听在组件根上，事件从内层编辑区冒泡前先到）
     const imageFile = new File(['x'], 'a.png', { type: 'image/png' })
-    const pasteImage: any = new Event('paste')
+    const pasteImage: any = new Event('paste', { bubbles: true })
     pasteImage.clipboardData = { files: [imageFile] }
     pasteImage.preventDefault = vi.fn()
     pasteImage.stopPropagation = vi.fn()
-    pasteListener(pasteImage)
+    target.dispatchEvent(pasteImage)
     await vi.waitFor(() => expect(upload).toHaveBeenCalledWith(imageFile))
     expect(pasteImage.preventDefault).toHaveBeenCalled()
+    expect(pasteImage.stopPropagation).toHaveBeenCalled()
 
     // 文字粘贴：放行（不 preventDefault、不上传）
-    const pasteText: any = new Event('paste')
+    const pasteText: any = new Event('paste', { bubbles: true })
     pasteText.clipboardData = { files: [] }
     pasteText.preventDefault = vi.fn()
-    pasteListener(pasteText)
+    target.dispatchEvent(pasteText)
     expect(pasteText.preventDefault).not.toHaveBeenCalled()
     expect(upload).toHaveBeenCalledTimes(1)
   })
 
-  it('disabled：粘贴/拖拽图片被拦截，不上传不改内容', async () => {
+  it('disabled：粘贴/拖拽图片被拦但不改内容（preventDefault 阻止浏览器导航）', async () => {
     const upload = vi.fn(async () => 'https://cdn.example.com/d.png')
-    const wrapper = mountEditor({ disabled: true })
+    const wrapper = mountEditor({ disabled: true, imageUpload: upload })
     expect(await flushQuill()).toBe(true)
-    const q = quillInstances[0]
-    const root = q.root as any
-    const pasteListener = root.addEventListener.mock.calls.find(
-      ([name]: any) => name === 'paste',
-    )![1]
+    const target = wrapper.find('.el-pro-rich-text__editor').element
     const imageFile = new File(['x'], 'a.png', { type: 'image/png' })
-    const pasteImage: any = new Event('paste')
+    const pasteImage: any = new Event('paste', { bubbles: true })
     pasteImage.clipboardData = { files: [imageFile] }
     pasteImage.preventDefault = vi.fn()
-    pasteListener(pasteImage)
-    // 禁用态：不拦截（放行原生行为）、不上传、内容不变
-    expect(pasteImage.preventDefault).not.toHaveBeenCalled()
+    target.dispatchEvent(pasteImage)
+    // 拦截：阻止默认（避免拖拽文件触发浏览器导航），但不上传、不改内容
+    expect(pasteImage.preventDefault).toHaveBeenCalled()
     expect(upload).not.toHaveBeenCalled()
     // 工具栏图片 handler 同样被挡
-    ;(q.__options.modules.toolbar.handlers.image as () => void)()
+    ;(quillInstances[0].__options.modules.toolbar.handlers.image as () => void)()
     await nextTick()
     expect(upload).not.toHaveBeenCalled()
-    expect(q.__inserts).toHaveLength(0)
+    expect(quillInstances[0].__inserts).toHaveLength(0)
   })
 
   it('多图粘贴：全部图片顺序上传（不只第一张）', async () => {
     const upload = vi.fn(async () => 'https://cdn.example.com/x.png')
-    mountEditor({ imageUpload: upload })
+    const wrapper = mountEditor({ imageUpload: upload })
     expect(await flushQuill()).toBe(true)
-    const q = quillInstances[0]
-    const root = q.root as any
-    const pasteListener = root.addEventListener.mock.calls.find(
-      ([name]: any) => name === 'paste',
-    )![1]
+    const target = wrapper.find('.el-pro-rich-text__editor').element
     const images = [
       new File(['a'], 'a.png', { type: 'image/png' }),
       new File(['b'], 'b.jpg', { type: 'image/jpeg' }),
       new File(['c'], 'c.png', { type: 'image/png' }),
     ]
-    const paste: any = new Event('paste')
+    const paste: any = new Event('paste', { bubbles: true })
     paste.clipboardData = { files: images }
     paste.preventDefault = vi.fn()
-    pasteListener(paste)
-    await vi.waitFor(() => expect(q.__inserts.length).toBe(3))
+    target.dispatchEvent(paste)
+    await vi.waitFor(() => expect(quillInstances[0].__inserts.length).toBe(3))
     expect(upload).toHaveBeenCalledTimes(3)
   })
 
