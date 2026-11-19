@@ -15,9 +15,14 @@
 npm i quill
 ```
 
-编辑器样式（`quill/dist/quill.snow.css`）已经打进 `el-pro-components/style.css`，所以不装 quill 也不影响其它组件，只是富文本组件起不来。
+编辑器样式**不在** `el-pro-components/style.css` 里（它约占主样式表 1/3 gzip，不用富文本的项目没必要下载）。用富文本时额外引一次：
 
-没装就渲染 `ElProRichText` 不会静默失败：编辑器区会显示初始化失败提示，控制台打出 `[ElProRichText] Quill 初始化失败`。
+```ts
+import 'el-pro-components/style.css'
+import 'el-pro-components/richtext.css' // 富文本主题样式（Quill snow），0.4.0 起独立出口
+```
+
+不装 quill 也不影响其它组件，只是富文本组件起不来。没装就渲染 `ElProRichText` 不会静默失败：编辑器区会显示初始化失败提示，控制台打出 `[ElProRichText] Quill 初始化失败`。
 
 ## 基本用法
 

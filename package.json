@@ -19,6 +19,7 @@
       "require": "./dist/el-pro.umd.cjs"
     },
     "./style.css": "./dist/el-pro.css",
+    "./richtext.css": "./dist/richtext.css",
     "./package.json": "./package.json"
   },
   "sideEffects": [
@@ -44,7 +45,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode lib",
+    "build": "vite build --mode lib && node scripts/build-richtext-css.mjs",
     "build:analyze": "vite build --mode analyze",
     "build:demo": "vite build",
     "preview": "vite preview",

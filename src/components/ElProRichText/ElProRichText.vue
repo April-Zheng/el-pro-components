@@ -12,7 +12,6 @@
  *   工具栏加 video 项并自己接管 handler（Quill 的 modules.toolbar.handlers）。
  */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import 'quill/dist/quill.snow.css'
 import type Quill from 'quill'
 
 /**
@@ -20,7 +19,11 @@ import type Quill from 'quill'
  * 静态 import 会让任何 SSR 环境（VitePress/Nuxt）在构建期直接崩；动态后 SSR
  * 只渲染占位骨架，客户端再创建编辑器。quill 是可选 peer 依赖（同 monaco-editor）：
  * 使用方要用富文本才装，未装时下面的 catch 会走 initError 提示。
- * 样式不同：`quill/dist/quill.snow.css` 是静态 import，已打进 el-pro.css。
+ *
+ * 样式也**不进 el-pro.css**：Quill 的 snow 主题约占主样式表 1/3 gzip，而不用富文本的
+ * 项目占绝大多数。它在使用方侧由 `import 'el-pro-components/richtext.css'` 单独引入
+ * （也可直接引 `quill/dist/quill.snow.css`）。这里不再静态 import 它，否则会被重新
+ * 合并进 el-pro.css，体积就悄悄涨回去。
  */
 let quillPromise: Promise<typeof import('quill')['default']> | null = null
 function loadQuill(): Promise<typeof import('quill')['default']> {

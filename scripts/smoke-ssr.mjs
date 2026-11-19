@@ -11,13 +11,14 @@
  * 2. 无 DOM 环境下 import 不抛错
  * 3. 关键导出齐全，且 install 是函数（曾因 UMD 包装丢失过）
  */
-import { readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const distFile = resolve(root, 'dist/el-pro.js')
 const cssFile = resolve(root, 'dist/el-pro.css')
+const richtextCssFile = resolve(root, 'dist/richtext.css')
 
 /** 关键导出：新增公共组件时在这里补一行，避免「导出了但忘了发」 */
 const REQUIRED_EXPORTS = [
@@ -60,6 +61,46 @@ check('dist/el-pro.js 存在且非空', () => {
 check('dist/el-pro.css 存在且非空', () => {
   const size = statSync(cssFile).size
   if (size < 1024) throw new Error(`产物过小：${size} bytes`)
+})
+
+/*
+ * 富文本样式必须独立成 dist/richtext.css：它约占 el-pro.css 的 1/3 gzip，
+ * 而绝大多数项目不用富文本。下面三条断言是体积回归与发布断链的唯一拦截点——
+ * 有人把 `import 'quill/dist/quill.snow.css'` 加回组件，或 exports 指向的文件没产出，
+ * 两种都会在这里红。
+ *
+ * 只查 quill 主题独有的选择器：组件自己也有 `.ql-editor` 这类覆盖（对齐 EP 主题的
+ * 几条），它们不算主题被重新内联的证据；`.ql-picker` / `.ql-stroke` 只可能来自
+ * quill.snow.css。
+ */
+const QUILL_THEME_MARKERS = /\.ql-(picker|stroke|blank|formats)/
+
+check('dist/richtext.css 存在且是 quill 主题样式', () => {
+  if (!existsSync(richtextCssFile)) {
+    throw new Error('dist/richtext.css 不存在，build 是否跑了 scripts/build-richtext-css.mjs')
+  }
+  if (!QUILL_THEME_MARKERS.test(readFileSync(richtextCssFile, 'utf8'))) {
+    throw new Error('richtext.css 里没有 quill 主题样式')
+  }
+})
+
+check('dist/el-pro.css 不含 quill 主题样式（已拆到 richtext.css）', () => {
+  if (QUILL_THEME_MARKERS.test(readFileSync(cssFile, 'utf8'))) {
+    throw new Error('el-pro.css 仍含 quill 主题样式，富文本样式被重新内联')
+  }
+})
+
+check('exports 里的 CSS 子路径都指向真实产物', () => {
+  const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
+  if (!pkg.exports?.['./richtext.css']) throw new Error('package.json 缺少 ./richtext.css 出口')
+  const cssExports = Object.entries(pkg.exports).filter(
+    ([, target]) => typeof target === 'string' && target.endsWith('.css'),
+  )
+  for (const [subpath, target] of cssExports) {
+    if (!existsSync(resolve(root, target))) {
+      throw new Error(`exports["${subpath}"] 指向的文件不存在：${target}`)
+    }
+  }
 })
 
 // 这一句是核心：没有 document，import 必须能完成
