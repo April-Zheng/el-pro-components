@@ -6,8 +6,12 @@ import { visualizer } from 'rollup-plugin-visualizer'
 
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
-/** 外置依赖：使用方自己装，不打进产物。报告标题也从这份清单生成，避免两处漂移 */
-const LIB_EXTERNAL = ['vue', 'element-plus', 'monaco-editor', 'quill']
+/**
+ * 外置依赖：使用方自己装，不打进产物。报告标题也从这份清单生成，避免两处漂移。
+ * - async-validator：与 element-plus 自带的是同一个包（^4.2.5），静态 external 让两边共用一份
+ * - sortablejs：只被 ElProTable 的 dragSortKey 行拖拽用（静态 import + external；消费侧是否真正省字节由使用方打包配置决定）
+ */
+const LIB_EXTERNAL = ['vue', 'element-plus', 'monaco-editor', 'quill', 'async-validator', 'sortablejs']
 
 export default defineConfig(({ mode }) => {
   const alias = { '@': r('./src') }
@@ -65,7 +69,13 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         external: LIB_EXTERNAL,
         output: {
-          globals: { vue: 'Vue', 'element-plus': 'ElementPlus' },
+          // 静态 external 的依赖 UMD 都要全局名（浏览器用法与 element-plus 一样要求自己挂全局）
+          globals: {
+            vue: 'Vue',
+            'element-plus': 'ElementPlus',
+            'async-validator': 'AsyncValidator',
+            'sortablejs': 'Sortable',
+          },
           exports: 'named',
           assetFileNames: (info) =>
             info.name === 'style.css' ? 'el-pro.css' : (info.name ?? '[name][extname]'),
