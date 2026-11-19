@@ -9,11 +9,15 @@
 
 ## 安装（可选依赖）
 
-`quill` 是可选依赖：不用富文本的项目不引入，要用时安装（已在 dependencies，包体小）：
+`quill` 是**可选 peer 依赖**：不用富文本的项目不安装它（约 4MB）；要用时安装：
 
 ```bash
 npm i quill
 ```
+
+编辑器样式（`quill/dist/quill.snow.css`）已经打进 `el-pro-components/style.css`，所以不装 quill 也不影响其它组件，只是富文本组件起不来。
+
+没装就渲染 `ElProRichText` 不会静默失败：编辑器区会显示初始化失败提示，控制台打出 `[ElProRichText] Quill 初始化失败`。
 
 ## 基本用法
 

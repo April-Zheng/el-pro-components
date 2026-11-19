@@ -35,7 +35,7 @@ import 'el-pro-components/style.css'
 createApp(App).use(ElementPlus).use(ElProComponents).mount('#app')
 ```
 
-`vue` 和 `element-plus` 是 peerDependencies，不会被打进包里。
+`vue` 和 `element-plus` 是 peerDependencies，不会被打进包里。`monaco-editor`（代码编辑器）与 `quill`（富文本）是**可选** peer 依赖：不用对应组件就不必安装。
 
 ## 快速开始
 

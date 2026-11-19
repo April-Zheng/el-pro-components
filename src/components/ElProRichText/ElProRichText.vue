@@ -18,7 +18,9 @@ import type Quill from 'quill'
 /**
  * 动态加载 Quill。为什么要动态：quill/core/emitter.js 在模块加载时就访问 document，
  * 静态 import 会让任何 SSR 环境（VitePress/Nuxt）在构建期直接崩；动态后 SSR
- * 只渲染占位骨架，客户端再创建编辑器。quill 是非可选依赖，使用方无需额外配置。
+ * 只渲染占位骨架，客户端再创建编辑器。quill 是可选 peer 依赖（同 monaco-editor）：
+ * 使用方要用富文本才装，未装时下面的 catch 会走 initError 提示。
+ * 样式不同：`quill/dist/quill.snow.css` 是静态 import，已打进 el-pro.css。
  */
 let quillPromise: Promise<typeof import('quill')['default']> | null = null
 function loadQuill(): Promise<typeof import('quill')['default']> {

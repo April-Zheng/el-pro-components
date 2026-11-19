@@ -45,6 +45,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --mode lib",
+    "build:analyze": "vite build --mode analyze",
     "build:demo": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -63,6 +64,7 @@
   "peerDependencies": {
     "element-plus": "^2.8.0",
     "monaco-editor": ">=0.34.0",
+    "quill": "^2.0.0",
     "vue": "^3.3.0"
   },
   "devDependencies": {
@@ -75,6 +77,8 @@
     "element-plus": "^2.8.0",
     "happy-dom": "^21.0.4",
     "monaco-editor": "^0.57.0",
+    "quill": "^2.0.3",
+    "rollup-plugin-visualizer": "^5.14.0",
     "typescript": "~5.4.5",
     "vite": "^5.4.0",
     "vite-plugin-dts": "^4.0.0",
@@ -85,11 +89,13 @@
   },
   "dependencies": {
     "async-validator": "^4.2.5",
-    "quill": "^2.0.3",
     "sortablejs": "^1.15.7"
   },
   "peerDependenciesMeta": {
     "monaco-editor": {
+      "optional": true
+    },
+    "quill": {
       "optional": true
     }
   }
