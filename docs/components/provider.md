@@ -42,9 +42,9 @@ const valueTypeMap = {
 
 ## labels
 
-内置文案整体覆盖。取值优先级：**组件显式 prop（如 `submitText`）> `labels` 对应键 > 默认中文**。逐键生效，未配置的键保持默认值。
+内置文案整体覆盖。取值优先级：**组件显式 prop（如 `submitText`）> 手动 `labels` 覆盖 > 当前 `locale` 语言包 > zh-CN 默认**。逐键生效，未配置的键保持默认值。
 
-设计边界：`labels` 只做文案注入/覆盖，**不做完整 i18n**——不引入 locale、语言包与运行时切换；**不做 dark / token / prefixCls** 入口，暗色与主题定制交给 Element Plus 生态。
+设计边界：**不做 dark / token / prefixCls** 入口，暗色与主题定制交给 Element Plus 生态；语言包固定内置 zh-CN / en-US 两套，扩展语言在 `core/locales.ts` 加包并在 `ProLocale` 登记，不提供运行时热替换语言包字典的新增机制。
 
 可用键（分组）：
 
@@ -78,6 +78,18 @@ const valueTypeMap = {
 | 其他 | `copy` / `copied` | `复制` / `已复制` | 单元格复制提示 |
 | 分步 | `stepsPrev` / `stepsNext` | `上一步` / `下一步` | 分步表单按钮 |
 
+## locale
+
+当前语言，默认 zh-CN。内置 zh-CN / en-US 两套语言包（键集与 labels 完全一致），**未手动覆盖的键随 locale 整体切换**，运行时切换立即生效（响应式）；手动 `labels` 覆盖的键在切换后保持。
+
+```vue
+<ElProConfigProvider locale="en-US">
+  <ElProTable :columns="columns" />
+</ElProConfigProvider>
+```
+
+嵌套规则：子 Provider 的 locale 覆盖父的；父的手动 labels 覆盖会逐层继承进子（并保持高于语言包）。
+
 ## 尺寸默认
 
 | 键 | 说明 |
@@ -91,6 +103,7 @@ const valueTypeMap = {
 | --- | --- | --- | --- |
 | valueTypeMap | 自定义 valueType 注册表 | `Record<string, ProValueTypeConfig>` | — |
 | labels | 内置文案覆盖 | `ProLabels` | — |
+| locale | 当前语言，切换后未覆盖键整体换语言 | `'zh-CN' \| 'en-US'` | `'zh-CN'` |
 | tableSize | 表格密度默认 | `'large' \| 'default' \| 'small'` | — |
 | formSize | 表单尺寸默认 | `'large' \| 'default' \| 'small'` | — |
 
@@ -101,5 +114,6 @@ import { useProConfig, useProLabel, mergeProConfig, routeToMenu } from 'el-pro-c
 ```
 
 - `useProConfig()`：组件内读当前生效的全局配置（无 Provider 时返回空配置）
-- `useProLabel()`：读一条内置文案（已与默认值合并）
+- `useProLabel()`：读一条内置文案（已按 locale + 手动覆盖解析）
+- `zhCN` / `enUS` / `localePack(locale)`：内置语言包，可作自定义覆盖的起点
 - `routeToMenu(routes)`：路由记录 → 菜单（见 [ElProLayout](/components/layout#菜单数据管道)）

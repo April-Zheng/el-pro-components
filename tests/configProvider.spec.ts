@@ -14,7 +14,9 @@ afterEach(() => {
 })
 
 function mountWithConfig(
-  config: Partial<Pick<ProConfigContext, 'valueTypeMap' | 'labels' | 'tableSize' | 'formSize'>> | undefined,
+  config:
+    | Partial<Pick<ProConfigContext, 'valueTypeMap' | 'labels' | 'locale' | 'tableSize' | 'formSize'>>
+    | undefined,
   render: () => any,
 ) {
   const root = document.createElement('div')
@@ -294,5 +296,57 @@ describe('labels：内置文案整体覆盖（Provider 一处换全库）', () =
     expect(merged.labels.loadMore).toBe(DEFAULT_PRO_LABELS.loadMore)
     expect(merged.labels.addItem).toBe(DEFAULT_PRO_LABELS.addItem)
     expect(merged.labels.toolbarReload).toBe(DEFAULT_PRO_LABELS.toolbarReload)
+  })
+})
+
+/* ------------------------------ locale：语言包与运行时切换 ------------------------------ */
+
+describe('locale：语言包与切换', () => {
+  it('merge：locale=en-US 时未手动覆盖的键取英文包', () => {
+    const merged = mergeProConfig(undefined, { locale: 'en-US' })
+    expect(merged.locale).toBe('en-US')
+    expect(merged.labels.search).toBe('Search')
+    expect(merged.labels.submit).toBe('Submit')
+    expect(merged.labels.toolbarReload).toBe('Reload')
+  })
+
+  it('手动 labels 覆盖优先于语言包', () => {
+    const merged = mergeProConfig(undefined, { locale: 'en-US', labels: { search: 'Find' } })
+    // 手动覆盖生效
+    expect(merged.labels.search).toBe('Find')
+    // 未覆盖的键取英文包
+    expect(merged.labels.submit).toBe('Submit')
+  })
+
+  it('无 locale 默认 zh-CN（未覆盖键取中文）', () => {
+    expect(mergeProConfig(undefined, {}).locale).toBe('zh-CN')
+    expect(mergeProConfig(undefined, {}).labels.search).toBe('查询')
+  })
+
+  it('嵌套：子切 locale 不被父语言包污染，父手动覆盖在子仍生效', () => {
+    const parent = mergeProConfig(undefined, { locale: 'en-US', labels: { search: 'Find' } })
+    const child = mergeProConfig(parent, { locale: 'zh-CN' })
+    expect(child.locale).toBe('zh-CN')
+    // 语言包按子的 zh-CN 现取：未覆盖键是中文，不是父英文包的 Reload
+    expect(child.labels.toolbarReload).toBe('刷新')
+    expect(child.labels.submit).toBe('提交')
+    // 父的手动覆盖 search=Find 逐层累积，在子仍生效
+    expect(child.labels.search).toBe('Find')
+  })
+
+  it('渲染：locale=en-US 后搜索栏按钮渲染英文', async () => {
+    const SearchForm = (await import('../src/components/ElProTable/SearchForm.vue')).default
+    const root = mountWithConfig(
+      { locale: 'en-US' },
+      () =>
+        h(SearchForm as any, {
+          columns: [{ prop: 'a', label: 'A', valueType: 'text', search: { span: 12 } }],
+          values: {},
+        }),
+    )
+    await nextTick()
+    const text = root.textContent ?? ''
+    expect(text).toContain('Search')
+    expect(text).toContain('Reset')
   })
 })

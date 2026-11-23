@@ -10,7 +10,7 @@
  */
 import { computed } from 'vue'
 import { mergeProConfig, provideProConfig, useProConfig } from '../../core/configContext'
-import type { ProConfigContext, ProLabels, ProValueTypeConfig, TableSize } from '../../types'
+import type { ProConfigContext, ProLabels, ProLocale, ProValueTypeConfig, TableSize } from '../../types'
 
 defineOptions({ name: 'ElProConfigProvider' })
 
@@ -23,6 +23,11 @@ const props = defineProps<{
   tableSize?: TableSize
   /** 表单尺寸默认 */
   formSize?: TableSize
+  /**
+   * 内置语言（默认 zh-CN）。切换后未手动覆盖的文案整体换语言；
+   * 手动 labels 覆盖的优先级在语言包之上
+   */
+  locale?: ProLocale
 }>()
 
 const parent = useProConfig()

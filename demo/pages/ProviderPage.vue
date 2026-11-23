@@ -7,8 +7,15 @@
  * ③ tableSize / formSize 全局尺寸默认，列/表 prop 显式传时以 prop 为准。
  */
 import { h, ref } from 'vue'
+import { ElButton } from 'element-plus'
 import { ElProConfigProvider, ElProForm, ElProLayout, ElProTable } from '@/index'
-import type { ProColumn } from '@/index'
+import type { ProColumn, ProLocale } from '@/index'
+
+/** locale 切换演示：按钮在 zh-CN / en-US 间切换，全库未覆盖文案跟着换 */
+const demoLocale = ref<ProLocale>('zh-CN')
+function toggleLocale() {
+  demoLocale.value = demoLocale.value === 'zh-CN' ? 'en-US' : 'zh-CN'
+}
 
 /** 全局自定义 valueType：本 demo 演示「积分徽章」读态 + 「滑杆倍数」编辑态 */
 const valueTypeMap = {
@@ -108,6 +115,29 @@ const menus = [
         :search="true"
         :options="{ reload: true, density: true, setting: true, fullscreen: true, search: true }"
       />
+    </div>
+
+    <div class="demo-card" style="margin-top: 16px">
+      <h3 class="demo-section-title">locale：运行时切换语言，全库未覆盖文案跟着换</h3>
+      <p class="demo-section-desc">
+        手动 labels 覆盖的键（刷新数据 / 查询数据等）在切换后仍保持；
+        未覆盖的键（密度/列设置、上一步/下一步、加载更多等）在 en-US 下变英文。
+      </p>
+      <div style="margin-bottom: 12px">
+        <ElButton type="primary" plain size="small" @click="toggleLocale">
+          切换为 {{ demoLocale === 'zh-CN' ? 'English' : '中文' }}
+        </ElButton>
+        <span style="margin-left: 8px; color: var(--el-text-color-secondary)">当前：{{ demoLocale }}</span>
+      </div>
+      <ElProConfigProvider :locale="demoLocale" :labels="labels">
+        <ElProTable
+          :columns="columns"
+          :data-source="rows"
+          :pagination="false"
+          :search="true"
+          :options="{ reload: true, density: true, setting: true, fullscreen: true, search: true }"
+        />
+      </ElProConfigProvider>
     </div>
   </ElProConfigProvider>
 </template>

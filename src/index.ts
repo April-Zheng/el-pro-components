@@ -87,6 +87,9 @@ export {
   useProLabel,
 } from './core/configContext'
 
+/** 内置语言包：zhCN（默认）/ enUS；localePack(locale) 取当前语言包（配 ProConfigProvider 的 locale） */
+export { zhCN, enUS, localePack } from './core/locales'
+
 /** 菜单数据管道：路由记录 → ProLayoutMenuItem */
 export { routeToMenu } from './core/menu'
 export type { ProRouteLike, RouteToMenuOptions } from './core/menu'

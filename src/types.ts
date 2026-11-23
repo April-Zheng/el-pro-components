@@ -289,12 +289,25 @@ export interface ProLabels {
   stepsNext?: string
 }
 
+/** 当前生效语言。内置 zh-CN（默认）与 en-US 两套语言包（见 core/locales.ts） */
+export type ProLocale = 'zh-CN' | 'en-US'
+
+/** 语言包：与 ProLabels 键集一一对应、每一键都有值的完整文案表 */
+export type ProLocalePack = Required<ProLabels>
+
 /** ProConfigProvider 下发的全局配置。 */
 export interface ProConfigContext {
   /** 自定义 valueType 注册表。键是 valueType 名，命中时优先于内置 valueType 词汇 */
   valueTypeMap: Record<string, ProValueTypeConfig>
-  /** 内置文案（已与默认值合并，读方无需再兜底） */
+  /**
+   * 内置文案（已解析成生效值：语言包 + 手动覆盖合并后的结果，读方无需再兜底）。
+   * 解析优先级：手动 labels 覆盖 > 当前 locale 语言包 > zh-CN 默认
+   */
   labels: ProLabels
+  /** 当前生效语言（Provider 的 locale，缺省 zh-CN）。读方一般只消费 labels，很少直接用它 */
+  locale: ProLocale
+  /** 手动 labels 覆盖（不含语言包）。嵌套 Provider 逐层继承用，读方不需它 */
+  manualLabels: ProLabels
   /** 表格 / 工具栏密度默认。列/表 prop 显式传时以 prop 为准 */
   tableSize?: TableSize
   /** 表单尺寸默认 */
