@@ -14,7 +14,10 @@ import { ElButton, ElTableColumn } from 'element-plus'
 import CellRenderer from '../../fields/CellRenderer.vue'
 import FormField from '../../fields/FormField.vue'
 import { PRO_TABLE_CELL } from '../../core/tableCellContext'
+import { useProLabel } from '../../core/configContext'
 import type { ProColumn } from '../../types'
+
+const label = useProLabel()
 
 defineOptions({ name: 'TableColumnNode' })
 
@@ -225,9 +228,9 @@ const FormatterCell = defineComponent({
                 :loading="ctx.savingKey.value === ctx.keyOf(row)"
                 @click="ctx.saveRow(row)"
               >
-                保存
+                {{ label('save') }}
               </ElButton>
-              <ElButton link size="small" @click="ctx.cancelRow(row)">取消</ElButton>
+              <ElButton link size="small" @click="ctx.cancelRow(row)">{{ label('cancel') }}</ElButton>
               <ElButton
                 v-if="ctx.showDeleteRow.value"
                 link
@@ -235,11 +238,11 @@ const FormatterCell = defineComponent({
                 size="small"
                 @click="ctx.removeRow(row)"
               >
-                删除
+                {{ label('delete') }}
               </ElButton>
             </template>
             <template v-else>
-              <ElButton link type="primary" size="small" @click="ctx.startEdit(row)">编辑</ElButton>
+              <ElButton link type="primary" size="small" @click="ctx.startEdit(row)">{{ label('edit') }}</ElButton>
               <ElButton
                 v-if="ctx.showDeleteRow.value"
                 link
@@ -247,7 +250,7 @@ const FormatterCell = defineComponent({
                 size="small"
                 @click="ctx.removeRow(row)"
               >
-                删除
+                {{ label('delete') }}
               </ElButton>
             </template>
           </div>

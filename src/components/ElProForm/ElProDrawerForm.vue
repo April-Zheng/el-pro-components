@@ -11,6 +11,8 @@
 import { ElButton, ElDrawer } from 'element-plus'
 import ElProForm from './ElProForm.vue'
 import { useFormContainer } from './useFormContainer'
+import { useProLabel } from '../../core/configContext'
+import { computed } from 'vue'
 import type { ProDrawerFormProps } from '../../types'
 
 defineOptions({ name: 'ElProDrawerForm' })
@@ -24,11 +26,16 @@ const props = withDefaults(defineProps<ProDrawerFormProps>(), {
   gutter: 16,
   labelWidth: '100px',
   labelPosition: 'right',
-  submitText: '提交',
-  cancelText: '取消',
+  // 显式 undefined：按钮文案回落 labels（submit / cancel），prop 显式传时优先
+  submitText: undefined,
+  cancelText: undefined,
   direction: 'rtl',
   drawerSize: '480px',
 })
+
+const label = useProLabel()
+const submitLabel = computed(() => props.submitText ?? label('submit'))
+const cancelLabel = computed(() => props.cancelText ?? label('cancel'))
 
 const emit = defineEmits<{
   'update:open': [boolean]
@@ -97,14 +104,14 @@ defineExpose({
 
     <template #footer>
       <slot name="footer" :submit="handleSubmit" :cancel="onCancel" :loading="submitting">
-        <ElButton class="el-pro-drawer-form__cancel" @click="onCancel">{{ cancelText }}</ElButton>
+        <ElButton class="el-pro-drawer-form__cancel" @click="onCancel">{{ cancelLabel }}</ElButton>
         <ElButton
           type="primary"
           class="el-pro-drawer-form__submit"
           :loading="submitting || loading"
           @click="handleSubmit"
         >
-          {{ submitText }}
+          {{ submitLabel }}
         </ElButton>
       </slot>
     </template>

@@ -31,10 +31,16 @@ const props = withDefaults(
     maxlength?: number
     clearable?: boolean
   }>(),
-  { countDown: 60, placeholder: '请输入验证码', maxlength: 6, clearable: true },
+  { countDown: 60, // 显式 undefined：占位回落 labels（captchaPlaceholder）
+    placeholder: undefined, maxlength: 6, clearable: true },
 )
 
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
+
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
+const placeholder = computed(() => props.placeholder ?? label('captchaPlaceholder'))
 
 const value = computed({
   get: () => props.modelValue ?? '',
@@ -83,7 +89,7 @@ onBeforeUnmount(stop)
       :loading="loading"
       @click="getCaptcha"
     >
-      {{ counting ? `${left}s 后重发` : '获取验证码' }}
+      {{ counting ? `${left}${label('captchaResend')}` : label('captchaGet') }}
     </ElButton>
   </div>
 </template>

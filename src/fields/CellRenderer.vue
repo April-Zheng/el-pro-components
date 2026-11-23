@@ -7,7 +7,7 @@
  */
 import { computed, defineComponent, inject, onBeforeUnmount, ref, watch } from 'vue'
 import { ElAvatar, ElImage, ElLink, ElProgress, ElRate, ElTag, ElTooltip } from 'element-plus'
-import { PRO_CONFIG, EMPTY_PRO_CONFIG } from '../core/configContext'
+import { PRO_CONFIG, EMPTY_PRO_CONFIG, useProLabel } from '../core/configContext'
 import { resolveCell } from '../core/valueType'
 import type { VNode } from 'vue'
 import type { ProColumn } from '../types'
@@ -30,6 +30,7 @@ const props = defineProps<{
 
 /** 全局 valueTypeMap：ProConfigProvider 下发，无 Provider 时为空表 */
 const config = inject(PRO_CONFIG, EMPTY_PRO_CONFIG)
+const label = useProLabel()
 
 /** 命中自定义 valueType 时的渲染结果；未命中返回 null，走内置词汇 */
 const customNode = computed<VNode | string | null>(() => {
@@ -238,7 +239,12 @@ watch(
       @mouseleave="onTextLeave"
     >
       <span class="el-pro-cell__ellipsis">{{ resolved.text }}</span>
-      <ElTooltip v-if="copyable" :content="copied ? '已复制' : '复制'" placement="top" :show-after="300">
+      <ElTooltip
+        v-if="copyable"
+        :content="copied ? label('copied') : label('copy')"
+        placement="top"
+        :show-after="300"
+      >
         <span class="el-pro-cell__copy" role="button" tabindex="0" @click.stop="handleCopy">
           <svg v-if="copied" class="el-pro-cell__copy-check" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6">
             <path d="M3 8.5 6.5 12 13 4.5" stroke-linecap="round" stroke-linejoin="round" />

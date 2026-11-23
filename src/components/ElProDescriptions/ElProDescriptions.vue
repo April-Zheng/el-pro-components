@@ -20,6 +20,9 @@ import CellRenderer from '../../fields/CellRenderer.vue'
 import ElProSkeleton from '../ElProSkeleton/ElProSkeleton.vue'
 import FormField from '../../fields/FormField.vue'
 import { resolveResponsive, useBreakpoint } from '../../core/responsive'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 import type { ProColumn, ProDescriptionsRequest, ResponsiveValue } from '../../types'
 
 defineOptions({ name: 'ElProDescriptions' })
@@ -105,7 +108,7 @@ async function fetchData() {
     if (id !== seq) return
 
     if (res?.success === false) {
-      errorMessage.value = res.errorMessage || '加载失败'
+      errorMessage.value = res.errorMessage || label('loadFailed')
       // 业务失败不清空已展示的记录：留着旧数据比白屏有用
       return
     }
@@ -114,7 +117,7 @@ async function fetchData() {
   } catch (err: any) {
     // 主动取消不算错误
     if (id !== seq || err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') return
-    errorMessage.value = err?.message || '加载失败'
+    errorMessage.value = err?.message || label('loadFailed')
     emit('load', undefined)
   } finally {
     if (id === seq) loadingInner.value = false
@@ -281,8 +284,8 @@ defineExpose({
         <!-- 就地编辑态 -->
         <div v-if="editable && editingKey === col.prop" class="el-pro-descriptions__edit">
           <FormField v-model="editValue" :column="col" mode="form" />
-          <ElButton link type="primary" size="small" :loading="saving" @click="saveEdit(col)">保存</ElButton>
-          <ElButton link size="small" :disabled="saving" @click="cancelEdit">取消</ElButton>
+          <ElButton link type="primary" size="small" :loading="saving" @click="saveEdit(col)">{{ label('save') }}</ElButton>
+          <ElButton link size="small" :disabled="saving" @click="cancelEdit">{{ label('cancel') }}</ElButton>
         </div>
 
         <template v-else>

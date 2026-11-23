@@ -19,6 +19,9 @@ import { ElButton, ElCheckbox, ElTooltip } from 'element-plus'
 import type { ProColumn } from '../../types'
 import { flattenLeaves, hasGroupColumns, isSettableColumn, moveItem } from '../../core/column'
 import type { ColumnFixed, ColumnFixedState } from '../../core/column'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 
 const props = withDefaults(
   defineProps<{
@@ -209,8 +212,8 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
 <template>
   <div class="el-pro-setting">
     <div class="el-pro-setting__head">
-      <ElCheckbox v-if="checkable" v-model="allChecked" size="small">列展示</ElCheckbox>
-      <ElButton link type="primary" size="small" @click="resetColumns">重置</ElButton>
+      <ElCheckbox v-if="checkable" v-model="allChecked" size="small">{{ label('columnShow') }}</ElCheckbox>
+      <ElButton link type="primary" size="small" @click="resetColumns">{{ label('reset') }}</ElButton>
     </div>
 
     <!-- 用原生 HTML5 拖拽，不引 sortablejs：一行小列表不值一个运行时依赖 -->
@@ -279,7 +282,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
           -->
           <span v-if="row.depth === 0" class="el-pro-setting__pins">
             <ElTooltip
-              :content="fixedOf(row.col) === 'left' ? '取消固定在列首' : '固定在列首'"
+              :content="fixedOf(row.col) === 'left' ? label('cancelFixedLeft') : label('fixedLeft')"
               placement="top"
               :show-after="200"
             >
@@ -287,7 +290,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
                 type="button"
                 class="el-pro-setting__pin"
                 :class="{ 'is-active': fixedOf(row.col) === 'left' }"
-                :aria-label="fixedOf(row.col) === 'left' ? '取消固定在列首' : '固定在列首'"
+                :aria-label="fixedOf(row.col) === 'left' ? label('cancelFixedLeft') : label('fixedLeft')"
                 @click.stop="emit('pin', row.col.prop!, 'left')"
               >
                 <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -297,7 +300,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
               </button>
             </ElTooltip>
             <ElTooltip
-              :content="fixedOf(row.col) === 'right' ? '取消固定在列尾' : '固定在列尾'"
+              :content="fixedOf(row.col) === 'right' ? label('cancelFixedRight') : label('fixedRight')"
               placement="top"
               :show-after="200"
             >
@@ -305,7 +308,7 @@ function fixedOf(col: ProColumn): ColumnFixed | undefined {
                 type="button"
                 class="el-pro-setting__pin"
                 :class="{ 'is-active': fixedOf(row.col) === 'right' }"
-                :aria-label="fixedOf(row.col) === 'right' ? '取消固定在列尾' : '固定在列尾'"
+                :aria-label="fixedOf(row.col) === 'right' ? label('cancelFixedRight') : label('fixedRight')"
                 @click.stop="emit('pin', row.col.prop!, 'right')"
               >
                 <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">

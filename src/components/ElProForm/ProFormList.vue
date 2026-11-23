@@ -14,6 +14,9 @@ import FormField from '../../fields/FormField.vue'
 import { resolveFormColumns } from '../../core/formDependency'
 import { cloneDraft } from '../../core/deepToRaw'
 import { PRO_FORM_READONLY } from '../../core/formContext'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 import type { ProColumn, ProFormListConfig } from '../../types'
 
 defineOptions({ name: 'ProFormList' })
@@ -256,9 +259,9 @@ function rowColumns(item: ListRow) {
 
     <div v-if="!isReadonly" class="el-pro-form-list__footer">
       <ElButton class="el-pro-form-list__add" :disabled="!canAdd" @click="add">
-        {{ config?.addText ?? '添加一项' }}
+        {{ config?.addText ?? label('addItem') }}
       </ElButton>
-      <span v-if="Number.isFinite(max)" class="el-pro-form-list__hint">最多 {{ max }} 项</span>
+      <span v-if="Number.isFinite(max)" class="el-pro-form-list__hint">{{ label('maxItemsPrefix') }} {{ max }} {{ label('maxItemsSuffix') }}</span>
     </div>
   </div>
 </template>

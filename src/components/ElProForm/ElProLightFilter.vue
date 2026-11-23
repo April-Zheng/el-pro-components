@@ -23,6 +23,9 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ElButton, ElForm, ElFormItem, ElPopover } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { resolveSearchColumn } from '../../core/column'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 import FormField from '../../fields/FormField.vue'
 import type { ProColumn, ProLightFilterProps } from '../../types'
 
@@ -249,7 +252,7 @@ defineExpose({
               >
                 <path d="M2.5 4h11M4.5 8h7M6.5 12h3" />
               </svg>
-              <template v-else>更多筛选</template>
+              <template v-else>{{ label('moreFilters') }}</template>
             </span>
           </template>
 
@@ -260,8 +263,8 @@ defineExpose({
               </ElFormItem>
             </div>
             <div class="el-pro-light-filter__footer">
-              <ElButton link type="primary" size="small" @click="onClear">重置</ElButton>
-              <ElButton type="primary" size="small" @click="onConfirm">确认</ElButton>
+              <ElButton link type="primary" size="small" @click="onClear">{{ label('reset') }}</ElButton>
+              <ElButton type="primary" size="small" @click="onConfirm">{{ label('confirm') }}</ElButton>
             </div>
           </div>
         </ElPopover>

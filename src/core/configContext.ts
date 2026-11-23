@@ -21,10 +21,73 @@ import type { ProConfigContext, ProLabels } from '../types'
 
 export const PRO_CONFIG: InjectionKey<ProConfigContext> = Symbol('elProConfig')
 
-/** 内置文案默认值。Provider 没配 labels 时用这一份 */
+/**
+ * 内置文案默认值。Provider 没配 labels（或某键没配）时用这一份；
+ * 与「未引入全局配置层」时的硬编码文案逐字一致（回归底线）。
+ */
 export const DEFAULT_PRO_LABELS: Required<ProLabels> = {
+  /* 布局 */
   layoutExpand: '展开菜单',
   layoutCollapse: '收起菜单',
+  /* 表格工具栏 */
+  toolbarReload: '刷新',
+  toolbarDensity: '密度',
+  toolbarColumnSetting: '列设置',
+  toolbarFullscreen: '全屏',
+  toolbarExitFullscreen: '退出全屏',
+  toolbarSearch: '搜索',
+  toolbarSearchPlaceholder: '搜索关键字，回车确认',
+  sizeLoose: '宽松',
+  sizeDefault: '默认',
+  sizeCompact: '紧凑',
+  /* 查询与搜索栏 */
+  search: '查询',
+  reset: '重置',
+  expand: '展开',
+  collapse: '收起',
+  /* 列设置 */
+  columnShow: '列展示',
+  fixedLeft: '固定在列首',
+  cancelFixedLeft: '取消固定在列首',
+  fixedRight: '固定在列尾',
+  cancelFixedRight: '取消固定在列尾',
+  /* 行内操作 / 空态 */
+  edit: '编辑',
+  cancel: '取消',
+  save: '保存',
+  addRow: '新增一行',
+  delete: '删除',
+  clear: '清空',
+  batchSelectedPrefix: '已选',
+  batchSelectedSuffix: '项',
+  empty: '暂无数据',
+  optionLabel: '操作',
+  /* 列表 */
+  loadMore: '加载更多',
+  loadingMore: '加载中…',
+  /* 表单 */
+  submit: '提交',
+  addItem: '添加一项',
+  maxItemsPrefix: '最多',
+  maxItemsSuffix: '项',
+  minPlaceholder: '最小值',
+  maxPlaceholder: '最大值',
+  startDatePlaceholder: '开始日期',
+  endDatePlaceholder: '结束日期',
+  /* 验证码 */
+  captchaGet: '获取验证码',
+  captchaResend: 's 后重发',
+  captchaPlaceholder: '请输入验证码',
+  /* 富文本 */
+  inputPlaceholder: '请输入',
+  /* 描述 / 其他 */
+  loadFailed: '加载失败',
+  moreFilters: '更多筛选',
+  confirm: '确认',
+  copy: '复制',
+  copied: '已复制',
+  stepsPrev: '上一步',
+  stepsNext: '下一步',
 }
 
 /** 无 Provider 时的空配置。行为与引入全局配置层之前完全一致，读方不要改它 */

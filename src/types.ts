@@ -153,12 +153,140 @@ export interface ProValueTypeConfig {
   }) => VNode | null
 }
 
-/** 内置文案键。只覆盖库自带的少量文案，不做完整 i18n */
+/**
+ * 内置文案键。Provider 配 labels 时整体覆盖，未配的键回落到默认中文。
+ *
+ * 设计边界（对齐本库定位，不做完整 i18n）：
+ * - 不做 locale / 多语言包 / 运行时切换语言——换文案靠 Provider 整体覆盖；
+ * - 不做 dark / token / prefixCls 入口——暗色与主题定制交由 Element Plus 生态。
+ *
+ * 取值优先级：显式 prop（如 submitText）> labels 对应键 > 默认文案。
+ * 键名沿用既有 camelCase 风格（layoutExpand / layoutCollapse 为先例），按组件语义分组。
+ */
 export interface ProLabels {
+  /* 布局 */
   /** 布局折叠按钮：侧栏展开时的 title */
   layoutExpand?: string
   /** 布局折叠按钮：侧栏收起时的 title */
   layoutCollapse?: string
+
+  /* 表格工具栏 */
+  /** 刷新按钮 */
+  toolbarReload?: string
+  /** 密度切换按钮 */
+  toolbarDensity?: string
+  /** 列设置按钮 */
+  toolbarColumnSetting?: string
+  /** 全屏按钮 */
+  toolbarFullscreen?: string
+  /** 退出全屏按钮 */
+  toolbarExitFullscreen?: string
+  /** 关键字搜索按钮 */
+  toolbarSearch?: string
+  /** 关键字搜索输入占位 */
+  toolbarSearchPlaceholder?: string
+  /** 密度选项：宽松 */
+  sizeLoose?: string
+  /** 密度选项：默认 */
+  sizeDefault?: string
+  /** 密度选项：紧凑 */
+  sizeCompact?: string
+
+  /* 查询与搜索栏（查询/重置/展开/收起通用） */
+  /** 查询 / 搜索按钮 */
+  search?: string
+  /** 重置按钮 */
+  reset?: string
+  /** 展开（更多查询项） */
+  expand?: string
+  /** 收起（查询项） */
+  collapse?: string
+
+  /* 列设置面板 */
+  /** 列展示勾选标题 */
+  columnShow?: string
+  /** 固定在列首 */
+  fixedLeft?: string
+  /** 取消固定在列首 */
+  cancelFixedLeft?: string
+  /** 固定在列尾 */
+  fixedRight?: string
+  /** 取消固定在列尾 */
+  cancelFixedRight?: string
+
+  /* 表格行内操作 / 空态 */
+  /** 行内编辑 */
+  edit?: string
+  /** 取消（行内编辑 / 描述编辑 / 弹窗取消） */
+  cancel?: string
+  /** 保存（行内编辑 / 描述编辑） */
+  save?: string
+  /** 新增一行 */
+  addRow?: string
+  /** 删除（行内操作） */
+  delete?: string
+  /** 清空（批量选择） */
+  clear?: string
+  /** 批量选择：已选 N 项 前缀 */
+  batchSelectedPrefix?: string
+  /** 批量选择：已选 N 项 后缀 */
+  batchSelectedSuffix?: string
+  /** 空态占位（表格 / 列表） */
+  empty?: string
+  /** 操作列默认标题 */
+  optionLabel?: string
+
+  /* 列表 */
+  /** 加载更多按钮 */
+  loadMore?: string
+  /** 加载中… */
+  loadingMore?: string
+
+  /* 表单 */
+  /** 提交（表单 / 弹窗 / 抽屉 / 分步最后一步） */
+  submit?: string
+  /** 添加一项（字段组列表） */
+  addItem?: string
+  /** 最多 N 项 前缀 */
+  maxItemsPrefix?: string
+  /** 最多 N 项 后缀 */
+  maxItemsSuffix?: string
+  /** 数字字段：最小值占位 */
+  minPlaceholder?: string
+  /** 数字字段：最大值占位 */
+  maxPlaceholder?: string
+  /** 日期区间：开始日期占位 */
+  startDatePlaceholder?: string
+  /** 日期区间：结束日期占位 */
+  endDatePlaceholder?: string
+
+  /* 验证码 */
+  /** 获取验证码按钮 */
+  captchaGet?: string
+  /** 重发倒计时后缀（如 “s 后重发”） */
+  captchaResend?: string
+  /** 验证码输入占位 */
+  captchaPlaceholder?: string
+
+  /* 富文本 */
+  /** 输入占位（富文本等） */
+  inputPlaceholder?: string
+
+  /* 描述 / 其他 */
+  /** 加载失败提示 */
+  loadFailed?: string
+  /** 更多筛选 */
+  moreFilters?: string
+  /** 确认（轻量筛选弹层） */
+  confirm?: string
+  /** 复制单元格 */
+  copy?: string
+  /** 复制成功（已复制） */
+  copied?: string
+  /** 分步表单：上一步 */
+  stepsPrev?: string
+  /** 分步表单：下一步 */
+  stepsNext?: string
 }
 
 /** ProConfigProvider 下发的全局配置。 */

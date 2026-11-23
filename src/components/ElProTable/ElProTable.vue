@@ -26,7 +26,7 @@ import {
 } from '../../core/column'
 import type { ColumnFixedState } from '../../core/column'
 import { PRO_TABLE_CELL } from '../../core/tableCellContext'
-import { useProConfig } from '../../core/configContext'
+import { useProConfig, useProLabel } from '../../core/configContext'
 import { DISPLAY_ONLY_VALUE_TYPES } from '../../core/valueType'
 import type { ProColumn, ProEditableConfig, ProRequest, TableSize } from '../../types'
 import SearchForm from './SearchForm.vue'
@@ -292,6 +292,7 @@ watch(
 )
 
 const config = useProConfig()
+const label = useProLabel()
 /**
  * 尺寸链：prop 显式传 > 全局默认（ProConfigProvider） > 'default'。
  * 全局默认在挂载时读一次：密度是用户在工具栏里切的状态（ref），
@@ -763,7 +764,7 @@ const showAddRow = computed(() => {
 const addRowText = computed(() => {
   const cfg = editableConfig.value
   const text = cfg && cfg.recordCreator !== false ? cfg.recordCreator?.text : undefined
-  return text ?? '新增一行'
+  return text ?? label('addRow')
 })
 const addRowBottom = computed(() => {
   const cfg = editableConfig.value
@@ -793,7 +794,7 @@ watch(data, (list) => {
 /** 没写 option 列时自动补一个操作列，否则进入编辑态后没有任何按钮可以点 */
 const editActionColumn: ProColumn = {
   valueType: 'option',
-  label: '操作',
+  label: label('optionLabel'),
   width: 150,
   fixed: 'right',
   hideInSetting: true,
@@ -1045,8 +1046,8 @@ defineExpose({
 
       <div v-if="selection && selectedCount" class="el-pro-table__batch">
         <span class="el-pro-table__batch-text">
-          已选 <b>{{ selectedCount }}</b> 项
-          <a class="el-pro-table__batch-clear" @click="clearSelected">清空</a>
+          {{ label('batchSelectedPrefix') }} <b>{{ selectedCount }}</b> {{ label('batchSelectedSuffix') }}
+          <a class="el-pro-table__batch-clear" @click="clearSelected">{{ label('clear') }}</a>
         </span>
         <span class="el-pro-table__batch-actions">
           <slot name="batch" :selected="table.selectedRows.value" :clear="clearSelected" />
@@ -1092,7 +1093,7 @@ defineExpose({
                 <rect x="8" y="12" width="32" height="26" rx="3" />
                 <path d="M8 20h32M18 12v26" stroke-linecap="round" />
               </svg>
-              <p>暂无数据</p>
+              <p>{{ label('empty') }}</p>
             </div>
           </slot>
         </template>

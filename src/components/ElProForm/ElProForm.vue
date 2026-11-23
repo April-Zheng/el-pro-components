@@ -9,7 +9,7 @@ import { computed, onMounted, provide, ref, watch } from 'vue'
 import { ElButton, ElCol, ElDivider, ElForm, ElFormItem, ElRow } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { resolveFormColumns } from '../../core/formDependency'
-import { useProConfig } from '../../core/configContext'
+import { useProConfig, useProLabel } from '../../core/configContext'
 import { PRO_FORM_READONLY } from '../../core/formContext'
 import FormField from '../../fields/FormField.vue'
 import ElProFormDependency from './ElProFormDependency.vue'
@@ -54,10 +54,16 @@ const props = withDefaults(
     labelWidth: '100px',
     labelPosition: 'right',
     showActions: true,
-    submitText: '提交',
-    resetText: '重置',
+    // 显式 undefined：按钮文案回落 labels（submit / reset），prop 显式传时优先
+    submitText: undefined,
+    resetText: undefined,
   },
 )
+
+const label = useProLabel()
+/** 按钮文案：显式 prop 优先，未传回落 labels */
+const submitLabel = computed(() => props.submitText ?? label('submit'))
+const resetLabel = computed(() => props.resetText ?? label('reset'))
 
 const emit = defineEmits<{
   submit: [Record<string, any>]
@@ -309,8 +315,8 @@ defineExpose({
 
       <ElCol v-if="$slots.footer || showActions" :span="24" class="el-pro-form__footer">
         <slot name="footer">
-          <ElButton type="primary" :loading="mergedLoading" @click="submit">{{ submitText }}</ElButton>
-          <ElButton @click="reset">{{ resetText }}</ElButton>
+          <ElButton type="primary" :loading="mergedLoading" @click="submit">{{ submitLabel }}</ElButton>
+          <ElButton @click="reset">{{ resetLabel }}</ElButton>
         </slot>
       </ElCol>
     </ElRow>

@@ -228,3 +228,71 @@ describe('尺寸默认：tableSize / formSize', () => {
     expect(root.querySelector('.el-form--small')).not.toBeNull()
   })
 })
+
+/* ------------------------------ labels 覆盖：全库文案整体替换 ------------------------------ */
+
+describe('labels：内置文案整体覆盖（Provider 一处换全库）', () => {
+  it('SearchForm 的查询/重置/展开按钮走 labels（prop 未传）', async () => {
+    const SearchForm = (await import('../src/components/ElProTable/SearchForm.vue')).default
+    const root = mountWithConfig(
+      {
+        labels: { search: 'Query', reset: 'Clear', expand: 'More', collapse: 'Less' },
+      },
+      () =>
+        h(SearchForm as any, {
+          columns: [
+            { prop: 'a', label: 'A', valueType: 'text', search: { span: 12 } },
+            { prop: 'b', label: 'B', valueType: 'text', search: { span: 12 } },
+          ],
+          values: {},
+        }),
+    )
+    await nextTick()
+    const text = root.textContent ?? ''
+    // 两列各 12 格，收起态留按钮 → 一列可见 + 「展开(n)」按钮
+    expect(text).toContain('Query')
+    expect(text).toContain('Clear')
+    expect(text).toContain('More')
+  })
+
+  it('ElProForm 提交/重置按钮走 labels（prop 未传）', async () => {
+    const ElProForm = (await import('../src/components/ElProForm/ElProForm.vue')).default
+    const root = mountWithConfig(
+      { labels: { submit: 'Submit', reset: 'ClearAll' } },
+      () =>
+        h(ElProForm as any, {
+          model: { name: '' },
+          columns: [{ prop: 'name', label: '名称', valueType: 'text' }],
+        }),
+    )
+    await nextTick()
+    const text = root.textContent ?? ''
+    expect(text).toContain('Submit')
+    expect(text).toContain('ClearAll')
+  })
+
+  it('数字区间占位符（最小值/最大值）走 labels', async () => {
+    const FormField = (await import('../src/fields/FormField.vue')).default
+    const root = mountWithConfig(
+      { labels: { minPlaceholder: 'MIN', maxPlaceholder: 'MAX' } },
+      () =>
+        h(FormField as any, {
+          modelValue: undefined,
+          column: { prop: 'range', label: '区间', valueType: 'digitRange' as any },
+          mode: 'form',
+        }),
+    )
+    await nextTick()
+    const placeholders = Array.from(root.querySelectorAll('input')).map((i) => i.placeholder)
+    expect(placeholders).toContain('MIN')
+    expect(placeholders).toContain('MAX')
+  })
+
+  it('未覆盖的键回落到默认中文（DEFAULT 表兜底）', () => {
+    const merged = mergeProConfig(undefined, { labels: { submit: 'Submit' } })
+    expect(merged.labels.submit).toBe('Submit')
+    expect(merged.labels.loadMore).toBe(DEFAULT_PRO_LABELS.loadMore)
+    expect(merged.labels.addItem).toBe(DEFAULT_PRO_LABELS.addItem)
+    expect(merged.labels.toolbarReload).toBe(DEFAULT_PRO_LABELS.toolbarReload)
+  })
+})

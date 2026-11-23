@@ -34,7 +34,7 @@ import {
 import type { VNode } from 'vue'
 import type { ProColumn } from '../types'
 import { enumToOptions } from '../core/valueType'
-import { PRO_CONFIG, EMPTY_PRO_CONFIG } from '../core/configContext'
+import { PRO_CONFIG, EMPTY_PRO_CONFIG, useProLabel } from '../core/configContext'
 import { PRO_FORM_READONLY } from '../core/formContext'
 import CellRenderer from './CellRenderer.vue'
 import ElProCodeEditor from '../components/ElProCodeEditor/ElProCodeEditor.vue'
@@ -62,6 +62,7 @@ const formReadonlyCtx = inject(PRO_FORM_READONLY, null)
 
 /** 全局 valueTypeMap：ProConfigProvider 下发，无 Provider 时为空表 */
 const config = inject(PRO_CONFIG, EMPTY_PRO_CONFIG)
+const label = useProLabel()
 
 const value = computed({
   get: () => props.modelValue,
@@ -433,7 +434,7 @@ const restUploadProps = computed(() => {
   <div v-else-if="effectiveType === 'digitRange'" class="el-pro-field--range">
     <ElInputNumber
       :model-value="rangeValue[0]"
-      placeholder="最小值"
+      :placeholder="label('minPlaceholder')"
       :controls-position="mergedProps['controls-position'] ?? 'right'"
       class="el-pro-field--full"
       v-bind="mergedProps"
@@ -442,7 +443,7 @@ const restUploadProps = computed(() => {
     <span class="el-pro-field__range-sep">~</span>
     <ElInputNumber
       :model-value="rangeValue[1]"
-      placeholder="最大值"
+      :placeholder="label('maxPlaceholder')"
       :controls-position="mergedProps['controls-position'] ?? 'right'"
       class="el-pro-field--full"
       v-bind="mergedProps"
@@ -569,8 +570,8 @@ const restUploadProps = computed(() => {
     :type="pickerType"
     :placeholder="placeholder"
     :value-format="dateValueFormat"
-    :start-placeholder="'开始日期'"
-    :end-placeholder="'结束日期'"
+    :start-placeholder="label('startDatePlaceholder')"
+    :end-placeholder="label('endDatePlaceholder')"
     class="el-pro-field--full el-pro-field--date"
     v-bind="mergedProps"
   />

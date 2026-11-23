@@ -13,6 +13,9 @@
  */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type Quill from 'quill'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 
 /**
  * 动态加载 Quill。为什么要动态：quill/core/emitter.js 在模块加载时就访问 document，
@@ -71,7 +74,8 @@ const props = withDefaults(
   }>(),
   {
     modelValue: '',
-    placeholder: '请输入',
+    // 显式 undefined：占位回落 labels（inputPlaceholder），prop 显式传时优先
+    placeholder: undefined,
     disabled: false,
     height: 300,
   },
@@ -189,7 +193,7 @@ async function initQuill(el: HTMLElement | null) {
     if (!el.isConnected) return
     quill = new Quill(el, {
       theme: 'snow',
-      placeholder: props.placeholder,
+      placeholder: props.placeholder ?? label('inputPlaceholder'),
       readOnly: props.disabled,
       modules: {
         /*

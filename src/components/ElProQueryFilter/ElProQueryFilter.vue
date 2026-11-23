@@ -13,6 +13,9 @@
  */
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElButton, ElCol, ElForm, ElFormItem, ElRow } from 'element-plus'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 import type { FormInstance } from 'element-plus'
 import { resolveSearchColumn } from '../../core/column'
 import { computeQueryFilterLayout, resolveShowLength } from '../../core/queryFilter'
@@ -29,8 +32,9 @@ const props = withDefaults(defineProps<ProQueryFilterProps>(), {
   span: () => ({ xs: 24, sm: 12, md: 8, lg: 6 }),
   defaultCollapsed: true,
   collapsible: true,
-  searchText: '查询',
-  resetText: '重置',
+  // 显式 undefined：按钮文案回落 labels（search / reset），prop 显式传时优先
+  searchText: undefined,
+  resetText: undefined,
   labelWidth: 'auto',
   labelPosition: 'right',
   gutter: 16,
@@ -38,6 +42,9 @@ const props = withDefaults(defineProps<ProQueryFilterProps>(), {
   showHiddenNum: false,
   preserve: true,
 })
+
+const searchLabel = computed(() => props.searchText ?? label('search'))
+const resetLabel = computed(() => props.resetText ?? label('reset'))
 
 const emit = defineEmits<{
   search: [Record<string, any>]
@@ -210,8 +217,8 @@ defineExpose({
       </ElCol>
 
       <ElCol :span="span" :offset="layout.actionsOffset" class="el-pro-query-filter__actions">
-        <ElButton type="primary" :loading="loading" @click="search">{{ searchText }}</ElButton>
-        <ElButton @click="reset">{{ resetText }}</ElButton>
+        <ElButton type="primary" :loading="loading" @click="search">{{ searchLabel }}</ElButton>
+        <ElButton @click="reset">{{ resetLabel }}</ElButton>
         <ElButton
           v-if="showCollapseButton"
           link
@@ -219,7 +226,7 @@ defineExpose({
           class="el-pro-query-filter__collapse"
           @click="toggleCollapse"
         >
-          {{ isCollapsed ? '展开' : '收起' }}
+          {{ isCollapsed ? label('expand') : label('collapse') }}
           <span v-if="isCollapsed && showHiddenNum && layout.hiddenCount" class="el-pro-query-filter__hidden">
             ({{ layout.hiddenCount }})
           </span>

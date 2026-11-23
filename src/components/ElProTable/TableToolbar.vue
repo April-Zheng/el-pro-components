@@ -20,6 +20,9 @@ import type { ProColumn, TableSize } from '../../types'
 import { isSettableColumn } from '../../core/column'
 import type { ColumnFixed, ColumnFixedState } from '../../core/column'
 import ColumnSetting from './ColumnSetting.vue'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 
 const props = withDefaults(
   defineProps<{
@@ -84,7 +87,9 @@ const settingOpen = ref(false)
 /** 工具栏关键字搜索：true 用默认文案，对象可配 placeholder */
 const searchCfg = computed(() => {
   if (!props.options || !props.options.search) return null
-  return props.options.search === true ? { placeholder: '搜索关键字，回车确认' } : props.options.search
+  return props.options.search === true
+    ? { placeholder: label('toolbarSearchPlaceholder') }
+    : props.options.search
 })
 const keyword = ref('')
 
@@ -100,11 +105,11 @@ function clearSearch() {
 /** 一个可设置的列都没有时，齿轮点开是空面板，不如不渲染 */
 const hasSettableColumns = computed(() => props.columns.some(isSettableColumn))
 
-const densityItems: { key: TableSize; label: string }[] = [
-  { key: 'large', label: '宽松' },
-  { key: 'default', label: '默认' },
-  { key: 'small', label: '紧凑' },
-]
+const densityItems = computed<{ key: TableSize; label: string }[]>(() => [
+  { key: 'large', label: label('sizeLoose') },
+  { key: 'default', label: label('sizeDefault') },
+  { key: 'small', label: label('sizeCompact') },
+])
 </script>
 
 <template>
@@ -134,10 +139,10 @@ const densityItems: { key: TableSize; label: string }[] = [
           @keyup.enter="submitSearch"
           @clear="clearSearch"
         />
-        <ElButton size="small" @click="submitSearch">搜索</ElButton>
+        <ElButton size="small" @click="submitSearch">{{ label('toolbarSearch') }}</ElButton>
       </div>
 
-      <ElTooltip v-if="opts.reload" content="刷新" placement="top" :show-after="300">
+      <ElTooltip v-if="opts.reload" :content="label('toolbarReload')" placement="top" :show-after="300">
         <button type="button" class="el-pro-toolbar__icon" :class="{ 'is-loading': loading }" @click="emit('refresh')">
           <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4">
             <path d="M13.2 8a5.2 5.2 0 1 1-1.5-3.7" stroke-linecap="round" />
@@ -158,7 +163,7 @@ const densityItems: { key: TableSize; label: string }[] = [
         @command="(v: TableSize) => emit('update:size', v)"
       >
         <span class="el-pro-toolbar__trigger">
-          <ElTooltip content="密度" placement="top" :show-after="300">
+          <ElTooltip :content="label('toolbarDensity')" placement="top" :show-after="300">
             <button type="button" class="el-pro-toolbar__icon">
               <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4">
                 <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke-linecap="round" />
@@ -191,7 +196,7 @@ const densityItems: { key: TableSize; label: string }[] = [
         <template #reference>
           <!-- 同上：ElPopover 的 reference 也会被 ElOnlyChild 克隆，别让属性落到组件上 -->
           <span class="el-pro-toolbar__trigger">
-            <ElTooltip content="列设置" placement="top" :show-after="300">
+            <ElTooltip :content="label('toolbarColumnSetting')" placement="top" :show-after="300">
               <button type="button" class="el-pro-toolbar__icon">
                 <!--
                   齿轮 = 设置。别改成「圆心 + 放射线」，那读起来是太阳/亮度，
@@ -233,7 +238,7 @@ const densityItems: { key: TableSize; label: string }[] = [
 
       <ElTooltip
         v-if="opts.fullscreen"
-        :content="fullscreen ? '退出全屏' : '全屏'"
+        :content="fullscreen ? label('toolbarExitFullscreen') : label('toolbarFullscreen')"
         placement="top"
         :show-after="300"
       >

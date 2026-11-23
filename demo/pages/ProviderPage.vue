@@ -29,7 +29,22 @@ const valueTypeMap = {
   },
 }
 
-const labels = { layoutExpand: '打开侧栏', layoutCollapse: '收起侧栏' }
+/** labels：一处覆盖全库内置文案（未配的键回落到默认中文）。演示代表键 */
+const labels = {
+  layoutExpand: '打开侧栏',
+  layoutCollapse: '收起侧栏',
+  toolbarReload: '刷新数据',
+  toolbarSearch: '搜索',
+  toolbarSearchPlaceholder: '输入关键字，回车确认',
+  search: '查询数据',
+  reset: '重置条件',
+  submit: '确定提交',
+  cancel: '取消关闭',
+  addRow: '新增记录',
+  empty: '暂无记录',
+  copy: '点击复制',
+  copied: '已复制',
+}
 
 /** 表格列直接用全局注册的自定义 valueType */
 const columns: ProColumn[] = [
@@ -78,6 +93,21 @@ const menus = [
           <ElProForm :model="model" :columns="formColumns" :span="12" :show-actions="false" />
         </ElProLayout>
       </div>
+    </div>
+
+    <div class="demo-card" style="margin-top: 16px">
+      <h3 class="demo-section-title">labels：一处覆盖全库表格工具栏 / 搜索栏 / 按钮文案</h3>
+      <p class="demo-section-desc">
+        表格工具栏（刷新数据 / 搜索 / 占位）、查询/重置、新增行、空态与复制提示都由 Provider 的
+        labels 整体替换；没配的键（如「密度」「列设置」）仍为默认中文。
+      </p>
+      <ElProTable
+        :columns="columns"
+        :data-source="rows"
+        :pagination="false"
+        :search="true"
+        :options="{ reload: true, density: true, setting: true, fullscreen: true, search: true }"
+      />
     </div>
   </ElProConfigProvider>
 </template>

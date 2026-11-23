@@ -42,12 +42,41 @@ const valueTypeMap = {
 
 ## labels
 
-内置文案覆盖，逐键生效，未配置的键保持默认值。当前可用键：
+内置文案整体覆盖。取值优先级：**组件显式 prop（如 `submitText`）> `labels` 对应键 > 默认中文**。逐键生效，未配置的键保持默认值。
 
-| 键 | 默认值 | 用在哪 |
-| --- | --- | --- |
-| layoutExpand | `展开菜单` | 布局折叠按钮（侧栏收起时的 title） |
-| layoutCollapse | `收起菜单` | 布局折叠按钮（侧栏展开时的 title） |
+设计边界：`labels` 只做文案注入/覆盖，**不做完整 i18n**——不引入 locale、语言包与运行时切换；**不做 dark / token / prefixCls** 入口，暗色与主题定制交给 Element Plus 生态。
+
+可用键（分组）：
+
+| 组 | 键 | 默认值 | 用在哪 |
+| --- | --- | --- | --- |
+| 布局 | `layoutExpand` / `layoutCollapse` | `展开菜单` / `收起菜单` | 布局折叠按钮 title |
+| 工具栏 | `toolbarReload` | `刷新` | 表格工具栏刷新按钮 |
+| 工具栏 | `toolbarDensity` | `密度` | 密度切换按钮 |
+| 工具栏 | `toolbarColumnSetting` | `列设置` | 列设置面板按钮 |
+| 工具栏 | `toolbarFullscreen` / `toolbarExitFullscreen` | `全屏` / `退出全屏` | 全屏切换按钮 |
+| 工具栏 | `toolbarSearch` / `toolbarSearchPlaceholder` | `搜索` / `搜索关键字，回车确认` | 关键字搜索按钮 / 占位 |
+| 工具栏 | `sizeLoose` / `sizeDefault` / `sizeCompact` | `宽松` / `默认` / `紧凑` | 密度选项 |
+| 查询 | `search` / `reset` | `查询` / `重置` | 表格搜索栏、查询筛选区按钮 |
+| 查询 | `expand` / `collapse` | `展开` / `收起` | 搜索栏 / 查询区折叠按钮 |
+| 列设置 | `columnShow` | `列展示` | 列设置面板标题 |
+| 列设置 | `fixedLeft` / `cancelFixedLeft` / `fixedRight` / `cancelFixedRight` | `固定在列首` / `取消固定在列首` / `固定在列尾` / `取消固定在列尾` | 固定列按钮 |
+| 操作 | `edit` / `cancel` / `save` / `delete` | `编辑` / `取消` / `保存` / `删除` | 行内编辑 / 描述编辑按钮 |
+| 操作 | `addRow` | `新增一行` | 表格新增行按钮 |
+| 操作 | `optionLabel` | `操作` | 操作列默认标题 |
+| 操作 | `clear` / `batchSelectedPrefix` / `batchSelectedSuffix` | `清空` / `已选` / `项` | 批量选择区 |
+| 空态 | `empty` | `暂无数据` | 表格 / 列表空态 |
+| 列表 | `loadMore` / `loadingMore` | `加载更多` / `加载中…` | 列表底部 |
+| 表单 | `submit` | `提交` | 表单 / 弹窗 / 抽屉 / 分步最后一步提交按钮 |
+| 表单 | `addItem` / `maxItemsPrefix` / `maxItemsSuffix` | `添加一项` / `最多` / `项` | 字段组列表添加按钮与上限提示 |
+| 表单 | `minPlaceholder` / `maxPlaceholder` | `最小值` / `最大值` | 数字区间占位 |
+| 表单 | `startDatePlaceholder` / `endDatePlaceholder` | `开始日期` / `结束日期` | 日期区间占位 |
+| 验证码 | `captchaGet` / `captchaResend` / `captchaPlaceholder` | `获取验证码` / `s 后重发` / `请输入验证码` | 验证码按钮 / 重发 / 占位 |
+| 富文本 | `inputPlaceholder` | `请输入` | 富文本占位 |
+| 描述 | `loadFailed` | `加载失败` | 描述列表加载失败提示 |
+| 其他 | `moreFilters` / `confirm` | `更多筛选` / `确认` | 轻量筛选弹层 |
+| 其他 | `copy` / `copied` | `复制` / `已复制` | 单元格复制提示 |
+| 分步 | `stepsPrev` / `stepsNext` | `上一步` / `下一步` | 分步表单按钮 |
 
 ## 尺寸默认
 

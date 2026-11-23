@@ -10,7 +10,10 @@ import { computed, ref } from 'vue'
 import { ElButton, ElCol, ElForm, ElFormItem, ElRow } from 'element-plus'
 import { resolveSearchColumn } from '../../core/column'
 import FormField from '../../fields/FormField.vue'
+import { useProLabel } from '../../core/configContext'
 import type { ProColumn } from '../../types'
+
+const label = useProLabel()
 
 const props = withDefaults(
   defineProps<{
@@ -28,8 +31,9 @@ const props = withDefaults(
     collapsible: true,
     defaultCollapsed: true,
     defaultSpan: 6,
-    searchText: '查询',
-    resetText: '重置',
+    // 显式 undefined：prop 未传时回落 labels（search / reset），别把默认写死在这里
+    searchText: undefined,
+    resetText: undefined,
   },
 )
 
@@ -67,6 +71,10 @@ const hiddenCount = computed(() =>
   collapsed.value ? props.columns.length - visibleCount.value : 0,
 )
 
+/** 按钮文案：显式 prop 优先，未传回落 labels（未配 Provider 时与旧的默认逐字一致） */
+const searchLabel = computed(() => props.searchText ?? label('search'))
+const resetLabel = computed(() => props.resetText ?? label('reset'))
+
 /** 搜索时可能要用另一种 valueType（如表格显示 dateTime、搜索用 dateRange） */
 function searchColumn(col: ProColumn): ProColumn {
   return resolveSearchColumn(col)
@@ -90,9 +98,9 @@ function searchColumn(col: ProColumn): ProColumn {
 
       <ElCol :span="6" class="el-pro-search__actions">
         <ElButton type="primary" :loading="loading" @click="emit('search')">
-          {{ searchText }}
+          {{ searchLabel }}
         </ElButton>
-        <ElButton @click="emit('reset')">{{ resetText }}</ElButton>
+        <ElButton @click="emit('reset')">{{ resetLabel }}</ElButton>
         <ElButton
           v-if="showCollapseButton"
           type="primary"
@@ -100,7 +108,7 @@ function searchColumn(col: ProColumn): ProColumn {
           class="el-pro-search__collapse"
           @click="collapsed = !collapsed"
         >
-          {{ collapsed ? `展开${hiddenCount ? ` (${hiddenCount})` : ''}` : '收起' }}
+          {{ collapsed ? `${label('expand')}${hiddenCount ? ` (${hiddenCount})` : ''}` : label('collapse') }}
           <svg
             viewBox="0 0 12 12"
             width="10"

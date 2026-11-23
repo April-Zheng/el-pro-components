@@ -18,7 +18,10 @@
 import { computed, defineComponent, h, reactive, ref } from 'vue'
 import { ElButton, ElCol, ElRow, ElStep, ElSteps } from 'element-plus'
 import ElProForm from './ElProForm.vue'
+import { useProLabel } from '../../core/configContext'
 import type { ProStepsFormItem, ProStepsSubmitter } from '../../types'
+
+const label = useProLabel()
 
 defineOptions({ name: 'ElProStepsForm' })
 
@@ -272,7 +275,7 @@ const stepsDirection = computed(() => (props.layout === 'vertical' ? 'vertical' 
               v-bind="submitterObj?.resetButtonProps"
               @click="onPre"
             >
-              上一步
+              {{ label('stepsPrev') }}
             </ElButton>
             <ElButton
               v-if="index < steps.length - 1"
@@ -281,7 +284,7 @@ const stepsDirection = computed(() => (props.layout === 'vertical' ? 'vertical' 
               v-bind="submitterObj?.submitButtonProps"
               @click="onNext"
             >
-              下一步
+              {{ label('stepsNext') }}
             </ElButton>
             <ElButton
               v-if="isLastStep || steps.length === 1"
@@ -290,7 +293,7 @@ const stepsDirection = computed(() => (props.layout === 'vertical' ? 'vertical' 
               v-bind="submitterObj?.submitButtonProps"
               @click="onNext"
             >
-              提交
+              {{ label('submit') }}
             </ElButton>
           </slot>
         </template>

@@ -19,6 +19,9 @@ import CellRenderer from '../../fields/CellRenderer.vue'
 import ElProCard from '../ElProCard/ElProCard.vue'
 import { useTable } from '../../core/useTable'
 import { resolveResponsive, useBreakpoint } from '../../core/responsive'
+import { useProLabel } from '../../core/configContext'
+
+const label = useProLabel()
 import type { ProColumn, ProListGrid, ProListSlot, ProRequest } from '../../types'
 
 defineOptions({ name: 'ElProList' })
@@ -88,7 +91,8 @@ const props = withDefaults(
     split: true,
     bordered: true,
     immediate: true,
-    emptyText: '暂无数据',
+    // 显式 undefined：空态文案回落 labels（empty），prop 显式传时优先
+    emptyText: undefined,
   },
 )
 
@@ -476,13 +480,13 @@ async function onLoadMore() {
       </div>
 
       <div v-else-if="!loadingState" class="el-pro-list__empty">
-        <slot name="empty">{{ emptyText }}</slot>
+        <slot name="empty">{{ emptyText ?? label('empty') }}</slot>
       </div>
     </div>
 
     <div v-if="loadMore && items.length" class="el-pro-list__footer el-pro-list__load-more">
       <button type="button" class="el-pro-list__load-more-btn" :disabled="loadMoreLoading" @click="onLoadMore">
-        {{ loadMoreLoading ? '加载中…' : '加载更多' }}
+        {{ loadMoreLoading ? label('loadingMore') : label('loadMore') }}
       </button>
     </div>
 
