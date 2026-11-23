@@ -6,7 +6,7 @@
  * 需要跨表复用逻辑时再传 column.cellComponent。
  */
 import { computed, defineComponent, inject, onBeforeUnmount, ref, watch } from 'vue'
-import { ElAvatar, ElImage, ElProgress, ElRate, ElTag, ElTooltip } from 'element-plus'
+import { ElAvatar, ElImage, ElLink, ElProgress, ElRate, ElTag, ElTooltip } from 'element-plus'
 import { PRO_CONFIG, EMPTY_PRO_CONFIG } from '../core/configContext'
 import { resolveCell } from '../core/valueType'
 import type { VNode } from 'vue'
@@ -58,6 +58,28 @@ const resolved = computed(() => {
 })
 
 const copyable = computed(() => !!props.column.copyable && resolved.value.kind !== 'empty')
+
+/** 判断 URL 是否为图片：按扩展名或 data:image/ 前缀 */
+function isImageUrl(url: string): boolean {
+  if (/^data:image\//i.test(url)) return true
+  return /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)(\?.*)?$/i.test(url)
+}
+
+/** upload 读态的展示项：拆出 url / 名称 / 是否图片，供模板渲染图片墙 + 文件链接 */
+const uploadItems = computed(() => {
+  const raw = props.value
+  const urls = Array.isArray(raw) ? raw : raw == null ? [] : [raw]
+  return urls.map((url, i) => {
+    let name = ''
+    try {
+      const path = String(url).split(/[?#]/)[0]
+      name = decodeURIComponent(path.split('/').pop() ?? '')
+    } catch {
+      /* 个别非法编码忽略，降级用兜底文案 */
+    }
+    return { url: String(url), name: name || `文件 ${i + 1}`, image: isImageUrl(String(url)) }
+  })
+})
 
 /** 复制成功反馈：图标短暂变 ✓（对齐 antd Typography 的安静反馈，不弹 ElMessage） */
 const copied = ref(false)
@@ -132,6 +154,32 @@ watch(
     fit="cover"
     class="el-pro-cell__image"
   />
+
+  <div
+    v-else-if="resolved.kind === 'upload'"
+    class="el-pro-cell__upload"
+    :class="uploadItems.some((i) => i.image) ? 'has-image' : undefined"
+  >
+    <template v-for="item in uploadItems" :key="item.url">
+      <ElImage
+        v-if="item.image"
+        :src="item.url"
+        :preview-src-list="uploadItems.filter((i) => i.image).map((i) => i.url)"
+        :preview-teleported="true"
+        fit="cover"
+        class="el-pro-cell__upload-img"
+      />
+      <ElLink
+        v-else
+        :href="item.url"
+        target="_blank"
+        type="primary"
+        class="el-pro-cell__upload-link"
+      >
+        {{ item.name }}
+      </ElLink>
+    </template>
+  </div>
 
   <span v-else-if="resolved.kind === 'color'" class="el-pro-cell__color">
     <span class="el-pro-cell__swatch" :style="{ background: resolved.colorValue }" />
@@ -252,6 +300,27 @@ watch(
   height: 32px;
   border-radius: 4px;
   vertical-align: middle;
+}
+.el-pro-cell__upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.el-pro-cell__upload.has-image {
+  gap: 4px;
+}
+.el-pro-cell__upload-img {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+}
+.el-pro-cell__upload-link {
+  font-size: 12px;
+}
+.el-pro-cell__upload-link + .el-pro-cell__upload-link {
+  margin-left: 8px;
 }
 .el-pro-cell__avatar {
   vertical-align: middle;

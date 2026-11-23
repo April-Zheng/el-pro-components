@@ -28,6 +28,8 @@ import {
   ElSwitch,
   ElTimePicker,
   ElTreeSelect,
+  ElUpload,
+  type UploadRequestOptions,
 } from 'element-plus'
 import type { VNode } from 'vue'
 import type { ProColumn } from '../types'
@@ -239,6 +241,95 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
   next[index] = v === null ? undefined : v
   emit('update:modelValue', next[0] === undefined && next[1] === undefined ? undefined : next)
 }
+
+/* ------------------------------ upload 字段 ------------------------------ */
+
+/** 从 URL 里抠文件名做展示名，抠不出就用兜底文案 */
+function basename(url: string): string {
+  try {
+    const path = url.split(/[?#]/)[0]
+    const name = path.split('/').pop()
+    return name && name.length > 0 ? decodeURIComponent(name) : ''
+  } catch {
+    return ''
+  }
+}
+
+/** 零配置回落：FileReader 读成 data URL 内嵌（对齐 RichText 的同款回落） */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+/**
+ * upload 的显示列表：由 URL 数组推导（单向）。
+ * 之所以不直接用 v-model:file-list 双向：值是纯 URL 数组，而 el-upload 的列表
+ * 是多字段对象（name/url/uid/status），双向会把内部形态泄漏到使用方。
+ * 这里把已有 URL 映射成一张只读展示列表，增/删/上传都走显式回调回写 modelValue。
+ */
+const uploadFileList = computed(() => {
+  const urls = Array.isArray(props.modelValue) ? props.modelValue : []
+  return urls.map((url, i) => ({
+    name: basename(url) || `文件 ${i + 1}`,
+    url: String(url),
+    // 稳定负数 uid：只读展示列表不需要 el-upload 分配临时 uid，也不会和它内部列表冲突
+    uid: -(i + 1),
+    status: 'success' as const,
+  }))
+})
+
+/** 删除一个文件：把它从 URL 数组里剔除 */
+function onUploadRemove(file: { url?: string }) {
+  const urls = Array.isArray(props.modelValue) ? [...props.modelValue] : []
+  const next = file.url ? urls.filter((u) => u !== file.url) : urls
+  emit('update:modelValue', next)
+}
+
+/**
+ * 上传动作。`fieldProps.customRequest(file, onProgress) => Promise<string>` 是
+ * 使用方注入的上传抽象（返回 URL），与 RichText 的 imageUpload 同构；不配时回落
+ * base64 内嵌（零配置可用）。成功把 URL 追加进 modelValue。
+ */
+async function uploadHttpRequest(options: UploadRequestOptions) {
+  const { file, onProgress, onError, onSuccess } = options
+  try {
+    const upload = (props.column.fieldProps as Record<string, any>)?.customRequest
+    const rawFile = file as File
+    const url = upload ? await upload(rawFile, onProgress) : await fileToBase64(rawFile)
+    const urls = Array.isArray(props.modelValue) ? [...props.modelValue] : []
+    urls.push(url)
+    emit('update:modelValue', urls)
+    onSuccess(url)
+  } catch (error) {
+    onError(error as Parameters<typeof onError>[0])
+  }
+}
+
+/**
+ * 透传给 el-upload 的其余属性。已经单独绑过的键（customRequest / listType /
+ * multiple / accept / limit / onPreview / httpRequest / disabled / autoUpload /
+ * onRemove）在这里剔掉，避免 v-bind 覆盖显式绑定。
+ */
+const restUploadProps = computed(() => {
+  const {
+    customRequest,
+    listType,
+    multiple,
+    accept,
+    limit,
+    onPreview,
+    httpRequest,
+    disabled,
+    autoUpload,
+    onRemove,
+    ...rest
+  } = (props.column.fieldProps ?? {}) as Record<string, any>
+  return rest
+})
 </script>
 
 <template>
@@ -299,6 +390,23 @@ function setRangePart(index: 0 | 1, v: number | undefined | null) {
       @update:model-value="(v: string) => emit('update:modelValue', v)"
     />
   </template>
+
+  <!-- 上传：值是 URL 数组。customRequest 注入上传动作（返回 URL），不配回落 base64 -->
+  <ElUpload
+    v-else-if="effectiveType === 'upload'"
+    :file-list="uploadFileList"
+    :auto-upload="true"
+    :list-type="mergedProps.listType ?? 'text'"
+    :multiple="mergedProps.multiple ?? true"
+    :accept="mergedProps.accept"
+    :disabled="mergedProps.disabled"
+    :limit="mergedProps.limit"
+    :http-request="uploadHttpRequest"
+    :on-remove="onUploadRemove"
+    :on-preview="mergedProps.onPreview"
+    class="el-pro-field--upload"
+    v-bind="restUploadProps"
+  />
 
   <!-- 数值 -->
   <ElInputNumber

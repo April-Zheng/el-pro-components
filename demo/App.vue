@@ -33,6 +33,7 @@ import PlaceholderPage from './pages/PlaceholderPage.vue'
 import ProviderPage from './pages/ProviderPage.vue'
 import CodeEditorPage from './pages/CodeEditorPage.vue'
 import RichTextPage from './pages/RichTextPage.vue'
+import UploadPage from './pages/UploadPage.vue'
 
 const active = ref(initialPage())
 </script>
@@ -72,6 +73,7 @@ const active = ref(initialPage())
     <ProviderPage v-else-if="active === '/provider'" />
     <CodeEditorPage v-else-if="active === '/code-editor'" />
     <RichTextPage v-else-if="active === '/rich-text'" />
+    <UploadPage v-else-if="active === '/upload'" />
     <PlaceholderPage v-else :path="active" />
 
     <template #footer>

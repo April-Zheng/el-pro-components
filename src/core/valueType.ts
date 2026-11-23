@@ -184,7 +184,7 @@ export type TagStatus = (typeof TAG_STATUS)[number]
  * 单元格解析结果。`kind` 决定用哪种外壳渲染，其余字段是给外壳的入参。
  */
 export interface ResolvedCell {
-  kind: 'text' | 'tag' | 'status' | 'progress' | 'image' | 'avatar' | 'color' | 'rate' | 'code' | 'empty'
+  kind: 'text' | 'tag' | 'status' | 'progress' | 'image' | 'avatar' | 'color' | 'rate' | 'code' | 'upload' | 'empty'
   text: string
   /** kind === 'tag' | 'status' */
   tagType?: TagStatus
@@ -438,6 +438,13 @@ export function resolveCell(opts: ResolveCellOptions): ResolvedCell {
     }
     case 'avatar':
       return { kind: 'avatar', text: String(value), src: String(value), raw: value }
+    case 'upload': {
+      // 读态是「图片墙 + 文件链接」，需要逐项区分类型，落给 CellRenderer 的 upload 分支渲染。
+      // 空数组按空值占位处理——空附件列显示 '-' 比空 div 更符合直觉；标量 URL 收进数组
+      const list = Array.isArray(value) ? value : value == null ? [] : [value]
+      if (list.length === 0) return empty()
+      return { kind: 'upload', text: '', raw: list }
+    }
     case 'color':
       return { kind: 'color', text: String(value), colorValue: String(value), raw: value }
     case 'checkbox':

@@ -86,6 +86,13 @@ export type ValueType =
   | 'index'
   | 'indexBorder'
   | 'option'
+  /**
+   * 文件上传。值是文件 URL 的数组（`string[]`）。编辑态是上传控件，读态是
+   * 「图片缩略图墙 + 非图片文件链接」。上传动作用 `fieldProps.customRequest:
+   * (file, onProgress?) => Promise<string>` 注入（返回 URL 进数组），不配时回落
+   * base64 内嵌（零配置可用）
+   */
+  | 'upload'
   /* 复合 */
   /**
    * 可增删的字段组：值是对象数组，每一项按 `children` 渲染一张子表单。
