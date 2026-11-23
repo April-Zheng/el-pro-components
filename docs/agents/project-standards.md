@@ -57,6 +57,8 @@ npm run build:demo   # demo 可用
 
 5.3 新组件/新行为要在 `demo/pages/` 配真实业务页——demo 即验收用例，`build:demo` 是它的人工检查入口。（证据：提交 a70e745 的定位声明）
 
+5.4 新组件 / 新入口 / 新交互面（跨容器分发、弹窗抽屉、真实浏览器交互）还必须在 `e2e/` 配一条真实浏览器 spec（Playwright 真实 Chromium，锚定 demo 页面）。单测（happy-dom / mock）覆盖不了容器挂载、弹窗时序、布局切换这类真实故障，e2e 层是这些面的完成条件；仅改后端 / 纯逻辑且无 UI 面时可以豁免，但报告里写明。（证据：`e2e/schema-form.spec.ts` 补位起由——该组件此前只有单测，无浏览器覆盖，与 `playwright.config.ts` 的既有定位声明同源）
+
 ## 6. 注释与文档
 
 6.1 注释用中文 JSDoc，解释**设计取舍和为什么**，不复述代码；容易被误用的行为（如受控/非受控双轨、竞态双保险）必须在实现处写明。（证据：useTable.ts、useFormContainer.ts 等的既有风格）
