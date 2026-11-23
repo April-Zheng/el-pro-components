@@ -30,6 +30,7 @@ import ElProFieldSet from './components/ElProForm/ElProFieldSet.vue'
 import ElProCardDivider from './components/ElProCard/ElProCardDivider.vue'
 import ElProCodeEditor from './components/ElProCodeEditor/ElProCodeEditor.vue'
 import ElProRichText from './components/ElProRichText/ElProRichText.vue'
+import ElProSchemaForm from './components/ElProSchemaForm/ElProSchemaForm.vue'
 
 export {
   ElProLayout,
@@ -62,6 +63,7 @@ export {
   ElProCardDivider,
   ElProCodeEditor,
   ElProRichText,
+  ElProSchemaForm,
   ElProConfigProvider,
 }
 
@@ -155,6 +157,7 @@ const components = [
   ElProStatisticCardGroup,
   ElProCodeEditor,
   ElProRichText,
+  ElProSchemaForm,
   ElProConfigProvider,
 ]
 

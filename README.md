@@ -105,6 +105,7 @@ type ProRequest<T> = (
 | `ElProQueryFilter` | 独立成块的查询筛选区（默认折叠，条件是页面自己的） |
 | `ElProForm` | 同一份 columns 生成表单（含分组 / 字段组 / 联动） |
 | `ElProStepsForm` | 分步表单：每步校验过了才前进，最后一步统一 onFinish |
+| `ElProSchemaForm` | 统一入口：一份 columns + `layoutType` 在 6 种容器（表单/弹窗/抽屉/分步/查询/轻量筛选）间切换 |
 | `ElProLightFilter` | 轻量筛选：行内紧凑字段，secondary 项收进「更多筛选」弹层 |
 | `ElProModalForm` / `ElProDrawerForm` | 同一套表单放进弹窗 / 抽屉，提交成功才关窗 |
 | `ElProDescriptions` | 同一份 columns 生成详情页 |

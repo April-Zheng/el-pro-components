@@ -86,6 +86,8 @@ export type ValueType =
   | 'index'
   | 'indexBorder'
   | 'option'
+  /** 表单分隔线（仅表单/分组渲染一条 el-divider；筛选与表格渲染忽略） */
+  | 'divider'
   /**
    * 文件上传。值是文件 URL 的数组（`string[]`）。编辑态是上传控件，读态是
    * 「图片缩略图墙 + 非图片文件链接」。上传动作用 `fieldProps.customRequest:
@@ -287,6 +289,8 @@ export interface ProLabels {
   stepsPrev?: string
   /** 分步表单：下一步 */
   stepsNext?: string
+  /** 自动生成的步骤标题前缀（如「步骤 1」的“步骤”） */
+  stepTitle?: string
 }
 
 /** 当前生效语言。内置 zh-CN（默认）与 en-US 两套语言包（见 core/locales.ts） */
@@ -677,6 +681,59 @@ export interface ProDrawerFormProps extends ProFormContainerProps {
   /** 抽屉尺寸（宽度或高度） @default '480px' */
   drawerSize?: string | number
 }
+
+/** ElProSchemaForm 的布局分发目标：决定用哪个页面容器 */
+export type ProSchemaFormLayout =
+  | 'form'
+  | 'modal'
+  | 'drawer'
+  | 'steps'
+  | 'queryFilter'
+  | 'lightFilter'
+
+/**
+ * ElProSchemaForm 统一入口的 props。
+ *
+ * 契约：一个 columns 数组 + layoutType 切换容器；**columns 直通**（与 ElProForm 字段管线
+ * 完全同语义：valueType/fieldProps/hideInForm/divider/formSet/dependency/group/formList
+ * 全部继承），仅 'steps' 时 columns 为二维（每步一维）。
+ *
+ * 除 columns / layoutType 外的字段按目标容器透传：modal 传 open/width、drawer 传
+ * drawerSize/direction、steps 传 submitter/current，其余属性经 attrs 透传给所选容器。
+ */
+export type ElProSchemaFormProps = {
+  /** 字段配置。layoutType !== 'steps' 时为一维 ProColumn[]；'steps' 时为二维（每步一维） */
+  columns: ProColumn[] | ProColumn[][]
+  /** 分发目标 @default 'form' */
+  layoutType?: ProSchemaFormLayout
+  /** 受控数据（form / modal / drawer / steps 共用） */
+  model?: Record<string, any>
+  initialValues?: Record<string, any>
+  title?: string
+  /* 栅格与标签（form / modal / drawer / queryFilter / lightFilter） */
+  span?: number
+  gutter?: number
+  labelWidth?: string | number
+  labelPosition?: 'left' | 'right' | 'top'
+  /* modal / drawer */
+  open?: boolean
+  defaultOpen?: boolean
+  width?: string | number
+  fullscreen?: boolean
+  top?: string
+  drawerSize?: string | number
+  direction?: 'rtl' | 'ltr' | 'ttb' | 'btt'
+  /* steps */
+  submitter?: false | ProStepsSubmitter
+  current?: number
+  /* queryFilter / lightFilter */
+  defaultCollapsed?: boolean
+  collapsed?: boolean
+  collapsible?: boolean
+  searchText?: string
+  resetText?: string
+  loading?: boolean
+} & Record<string, unknown>
 
 /**
  * 查询筛选区（ElProQueryFilter）。

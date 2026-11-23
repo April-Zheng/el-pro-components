@@ -33,6 +33,7 @@ export const menus: ProLayoutMenuItem[] = [
   { title: '代码编辑器', path: '/code-editor' },
   { title: '富文本', path: '/rich-text' },
   { title: 'Upload 字段', path: '/upload' },
+  { title: 'Schema 表单', path: '/schema-form' },
   {
     title: '分组菜单',
     children: [

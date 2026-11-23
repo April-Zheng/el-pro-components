@@ -71,6 +71,7 @@ export const zhCN: Required<ProLabels> = {
   copied: '已复制',
   stepsPrev: '上一步',
   stepsNext: '下一步',
+  stepTitle: '步骤',
 }
 
 /** English language pack */
@@ -127,6 +128,7 @@ export const enUS: Required<ProLabels> = {
   copied: 'Copied',
   stepsPrev: 'Previous',
   stepsNext: 'Next',
+  stepTitle: 'Step',
 }
 
 /** 取当前 locale 的语言包 */
