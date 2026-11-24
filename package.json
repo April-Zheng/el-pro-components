@@ -1,6 +1,6 @@
 {
   "name": "el-pro-components",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Element Plus 体系的 Pro 高阶模板组件：ProTable / ProForm / ProDescriptions / ProLayout，由列 schema 驱动，内置 valueType 渲染器与请求生命周期",
   "type": "module",
   "engines": {
