@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus'
 import { ElProSchemaForm } from '@/index'
 import type { ProColumn, ProSchemaFormLayout } from '@/index'
 
-/** 一份 columns 六种容器复用：divider 列也展示（form/steps 下渲染分隔线，筛选下忽略） */
-const columns: ProColumn[] = [
+/** 一份 columns 六种容器复用：divider 列也展示（form/steps 下渲染分隔线，筛选下忽略）。
+ *  字段密度跟随容器宽：窄容器（modal/drawer）一行两列，宽容器（form/steps/筛选）一行三列，
+ *  否则 560/480px 容器减去 100px label 后控件区只剩几十像素，观感与可用性都差。 */
+const baseColumns: ProColumn[] = [
   { prop: 'name', label: '名称', valueType: 'text', formSpan: 8 },
   { prop: 'status', label: '状态', valueType: 'select', formSpan: 8, valueEnum: { 1: '启用', 2: '停用' } as any },
   { prop: 'createdAt', label: '创建时间', valueType: 'dateTime', formSpan: 8 },
   { prop: 'divider', label: '基本信息', valueType: 'divider' },
   { prop: 'remark', label: '备注', valueType: 'textarea', formSpan: 24 },
 ]
+
+const columns = computed<ProColumn[]>(() => {
+  const narrow = layout.value === 'modal' || layout.value === 'drawer'
+  return baseColumns.map((col) => (col.formSpan === 8 ? { ...col, formSpan: narrow ? 12 : 8 } : col))
+})
 
 const layouts: ProSchemaFormLayout[] = ['form', 'modal', 'drawer', 'steps', 'queryFilter', 'lightFilter']
 const layout = ref<ProSchemaFormLayout>('form')

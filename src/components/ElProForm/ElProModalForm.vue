@@ -133,4 +133,32 @@ defineExpose({
 .el-pro-modal-form__trigger {
   display: inline-block;
 }
+.el-pro-modal-form .el-dialog__body {
+  /*
+    内容超高时弹窗会被撑出视口：表单字段多/有高 textarea 时，底部与提交按钮跑到
+    屏幕外“超出弹窗区域”，用户看不到 footer。约束内容区在视口 70% 高度内内部滚动，
+    弹窗自身不随内容变高，footer 固定可见。
+  */
+  max-height: 70vh;
+  overflow-y: auto;
+  /*
+    gutter 负 margin 会让 el-row 向两侧出血 8px 落在 body 自身 padding 区内，
+    不含任何可见内容；但内容区一旦成为滚动容器，Chrome 会为这 8px 出
+    一条无意义的横向滚动条。这里收掉横向滚动：出血只是留白，不会有内容被裁剪
+    （真实内容最右只到行边缘，仍在弹窗边框内）。
+  */
+  overflow-x: hidden;
+}
+/*
+  日期控件随列宽伸缩：.el-date-editor 默认固定约 220px 宽，在窄弹窗里
+  （如 560px + formSpan 8 一行三列，每列约 176px）不收缩，会撑宽整行；
+  而内容区 overflow-y:auto 连带开启横向滚动，溢出表现为横向滚动条。
+  仅有 width:100% 不够：控件是 form-item content 的 flex 项，min-width:auto
+  使它不能收缩到固有 min-content（前缀图标 + input 默认尺寸，约 180px）以下，
+  必须显式 min-width:0 才真正交给列布局决定，溢出源头消失。
+*/
+.el-pro-modal-form .el-date-editor {
+  width: 100%;
+  min-width: 0;
+}
 </style>

@@ -122,4 +122,18 @@ defineExpose({
 .el-pro-drawer-form__trigger {
   display: inline-block;
 }
+/*
+  与 ElProModalForm 同一套口径（两个文件必须一起改）：
+  抽屉 body 在 EP 里默认就是滚动容器（overflow:auto），gutter 负 margin 的 8px
+  出血 + 窄列下 .el-date-editor 卡在固有 min-content（前缀图标 + input 默认尺寸，
+  约 180px）不收缩，都会表现为横向滚动条。min-width:0 让控件真正交给列布局，
+  overflow-x:hidden 收掉不含可见内容的出血（真实内容仍在抽屉边框内）。
+*/
+.el-pro-drawer-form .el-drawer__body {
+  overflow-x: hidden;
+}
+.el-pro-drawer-form .el-date-editor {
+  width: 100%;
+  min-width: 0;
+}
 </style>
